@@ -1,6 +1,12 @@
 SHELL := /bin/bash
 
-boot:
-	@go run main.go
+boot: install
+	@go run main.go \
+		--selector a \
+		--attribute href \
+		https://google.com?q=golang
+
+install:
+	@go get github.com/puerkitobio/goquery
 
 .PHONY: test

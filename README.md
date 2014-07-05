@@ -4,39 +4,22 @@
 
 ## Usage
 
-Following setup crawls all URLs at
-[google.com?q=golang](https://google.com?q=golang):
+Compile the program with go and then run it with:
 
-    package main
-
-    import (
-        "fmt"
-
-        "github.com/bodokaiser/go-crawler"
-    )
-
-    func main() {
-        // create a new crawler struct
-        c := crawler.New()
-
-        // start crawling on following url
-        c.Open("https://google.com?q=golang")
-
-        // listen to the received results
-        c.Listen(listener)
-    }
-
-    func listener(p crawler.Pipeline) {
-        r := <-p
-
-        fmt.Printf("Found %d URLs at %s", len(r.URLS), r.Origin)
-    }
+    $ crawler \
+        --selector a \
+        --attribute href \
+        http://example.org
 
 ## Install
 
-Use `go get` to clone the repository:
+Use `git` to clone the repository:
 
-    $ go get github.com/bodokaiser/go-crawler
+    $ git clone https://github.com/bodokaiser/go-crawler
+
+and then `make` to install dependencies and to build:
+
+    $ cd go-crawler && make
 
 ## License
 
