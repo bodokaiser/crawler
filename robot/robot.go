@@ -1,39 +1,40 @@
 package robot
 
 import (
+	"strings"
+
 	. "github.com/puerkitobio/goquery"
 
 	"github.com/bodokaiser/go-crawler/conf"
 )
 
 type Robot struct {
-	Origin    string
-	Results   []string
-	selector  string
-	attribute string
+	Origin  string
+	Results []string
 }
 
-func New(conf conf.Conf) *Robot {
-	o := conf["entry"]
-	s := conf["selector"]
-	a := conf["attribute"]
-
-	return &Robot{o, []string{}, s, a}
+func New() *Robot {
+	return &Robot{}
 }
 
-func (r *Robot) Open() error {
+func (r *Robot) Open(c conf.Conf) error {
+	r.Origin = c["entry"]
+
 	doc, err := NewDocument(r.Origin)
 
 	if err != nil {
 		return err
 	}
 
-	doc.Find(r.selector).Each(func(i int, el *Selection) {
-		attr, exists := el.Attr(r.attribute)
+	r.Results = doc.Find("a").Map(func(i int, el *Selection) string {
+		attr, _ := el.Attr("href")
 
-		if exists {
-			r.Results = append(r.Results, attr)
+		// put the hostname in front if we have local path
+		if strings.Index(attr, "/") == 1 {
+			attr = r.Origin + attr
 		}
+
+		return attr
 	})
 
 	return nil

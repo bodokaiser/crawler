@@ -2,9 +2,8 @@ SHELL := /bin/bash
 
 boot: install
 	@go run main.go \
-		--selector a \
-		--attribute href \
-		https://google.com?q=golang
+		--addr :3000 \
+		http://www.google.com/search?q=Hello+World
 
 install:
 	@go get github.com/puerkitobio/goquery
