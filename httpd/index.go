@@ -5,10 +5,16 @@ import (
 	"text/template"
 )
 
-var (
-	index = template.Must(template.ParseFiles("httpd/templates/index.html"))
-)
+type Index struct {
+	template *template.Template
+}
 
-func Index(w http.ResponseWriter, r *http.Request) {
-	index.Execute(w, nil)
+func NewIndex() *Index {
+	t := template.Must(template.ParseFiles("httpd/templates/index.html"))
+
+	return &Index{t}
+}
+
+func (i *Index) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	i.template.Execute(w, nil)
 }

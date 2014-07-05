@@ -13,7 +13,8 @@ func New() *Httpd {
 }
 
 func (h *Httpd) Listen(c conf.Conf) {
-	http.HandleFunc("/", Index)
+	http.Handle("/", NewIndex())
+	http.Handle("/events", NewEvents())
 
 	http.ListenAndServe(c["addr"], nil)
 }
