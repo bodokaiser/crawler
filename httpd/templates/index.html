@@ -1,19 +1,7 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Go-Crawler</title>
-  </head>
-  <body>
-    <h1>Hello World</h1>
-    <ul></ul>
-    <script>
-      var ul = document.querySelector('ul')
-
-      new EventSource('/events').addEventListener('message', function(e) {
-        var message = e.data;
-
-        ul.innerHTML += '<li>' + e.data + '</li>';
-      })
-    </script>
-  </body>
-</html>
+{{ define "index" }}
+  <!DOCTYPE html>
+  <html>
+    {{ template "head" }}
+    {{ template "body" }}
+  </html>
+{{ end }}

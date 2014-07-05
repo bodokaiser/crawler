@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-type Events struct{}
+type EventHandle struct{}
 
-func NewEvents() *Events {
-	return &Events{}
+func NewEventHandle() *EventHandle {
+	return &EventHandle{}
 }
 
-func (e *Events) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (e *EventHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f, ok := w.(http.Flusher)
 
 	if !ok {

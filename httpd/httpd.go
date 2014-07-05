@@ -3,18 +3,29 @@ package httpd
 import (
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/bodokaiser/go-crawler/conf"
 )
 
-type Httpd struct{}
+type Httpd struct {
+	static http.Handler
+}
 
 func New() *Httpd {
-	return &Httpd{}
+	f := http.FileServer(http.Dir("./httpd/public"))
+
+	return &Httpd{f}
 }
 
 func (h *Httpd) Listen(c conf.Conf) {
-	http.Handle("/", NewIndex())
-	http.Handle("/events", NewEvents())
+	r := mux.NewRouter()
 
-	http.ListenAndServe(c["addr"], nil)
+	r.Handle("/", NewViewHandle())
+	r.Handle("/events", NewEventHandle())
+
+	r.PathPrefix("/stylesheets").Handler(h.static)
+	r.PathPrefix("/javascripts").Handler(h.static)
+
+	http.ListenAndServe(c["addr"], r)
 }
