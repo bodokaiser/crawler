@@ -1,25 +1,8 @@
-# Crawler
+# Gerenuk
 
-**Crawler** is a concurrent URL web crawler written in **Go**.
+![Gerenuk](bit.ly/1r7CKNx)
 
-## Usage
-
-Compile the program with go and then run it with:
-
-    $ crawler \
-        --selector a \
-        --attribute href \
-        http://example.org
-
-## Install
-
-Use `git` to clone the repository:
-
-    $ git clone https://github.com/bodokaiser/go-crawler
-
-and then `make` to install dependencies and to build:
-
-    $ cd go-crawler && make
+**Gerenuk** is a concurrent URL web crawler written in **Go**.
 
 ## License
 
