@@ -4,4 +4,6 @@ import "io"
 
 type Parser interface {
 	io.Writer
+
+	Result() []string
 }

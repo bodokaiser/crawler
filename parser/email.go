@@ -1,9 +1,7 @@
 package parser
 
-import "fmt"
-
 type EmailParser struct {
-	Results []string
+	results []string
 }
 
 func (p *EmailParser) Write(b []byte) (int, error) {
@@ -33,14 +31,16 @@ func (p *EmailParser) Write(b []byte) (int, error) {
 				}
 			}
 
-			fmt.Printf("\nfound email: %s\n", b[offset+1:length])
-
 			// add extracted email to result set if not existent
-			p.Results = append(p.Results, string(b[offset+1:length]))
+			p.results = append(p.results, string(b[offset+1:length]))
 		}
 	}
 
 	return size, nil
+}
+
+func (p *EmailParser) Result() []string {
+	return p.results
 }
 
 func alpha(c byte) bool {

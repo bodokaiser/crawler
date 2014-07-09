@@ -16,8 +16,14 @@ func TestEmailParserWrite(t *testing.T) {
 			Convey("Should return no error", func() {
 				So(err, ShouldBeNil)
 			})
-			Convey("Should have no email in results", func() {
-				So(parser.Results, ShouldBeEmpty)
+
+			Convey("Result()", func() {
+				result := parser.Result()
+
+				Convey("Should return no url", func() {
+					So(result, ShouldBeEmpty)
+					So(result, ShouldHaveSameTypeAs, []string{})
+				})
 			})
 		})
 	})
@@ -30,8 +36,13 @@ func TestEmailParserWrite(t *testing.T) {
 			Convey("Should return no error", func() {
 				So(err, ShouldBeNil)
 			})
-			Convey("Should append email to result", func() {
-				So(parser.Results, ShouldResemble, []string{"me@example.org"})
+
+			Convey("Result()", func() {
+				result := parser.Result()
+
+				Convey("Should return email", func() {
+					So(result, ShouldResemble, []string{"me@example.org"})
+				})
 			})
 		})
 	})
@@ -44,8 +55,12 @@ func TestEmailParserWrite(t *testing.T) {
 			Convey("Should return no error", func() {
 				So(err, ShouldBeNil)
 			})
-			Convey("Should append email to result once", func() {
-				So(parser.Results, ShouldResemble, []string{"me@example.org", "info@example.org"})
+			Convey("Result()", func() {
+				result := parser.Result()
+
+				Convey("Should return emails", func() {
+					So(result, ShouldResemble, []string{"me@example.org", "info@example.org"})
+				})
 			})
 		})
 	})
@@ -58,8 +73,13 @@ func TestEmailParserWrite(t *testing.T) {
 			Convey("Should return no error", func() {
 				So(err, ShouldBeNil)
 			})
-			Convey("Should append email to result once", func() {
-				So(parser.Results, ShouldResemble, []string{"me@example.org"})
+
+			Convey("Result()", func() {
+				result := parser.Result()
+
+				Convey("Should return email", func() {
+					So(result, ShouldResemble, []string{"me@example.org"})
+				})
 			})
 		})
 	})
