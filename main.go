@@ -1,8 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"time"
+	"strings"
 
 	"github.com/bodokaiser/gerenuk/conf"
 	"github.com/bodokaiser/gerenuk/parser"
@@ -16,14 +17,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go request(c["url"])
+	r := make(chan []string)
 
-	time.Sleep(5 * time.Second)
+	go request(c["url"], r)
+
+	for {
+		result, ok := <-r
+
+		if ok {
+			fmt.Printf("\nResult: %s\n", strings.Join(result, ", "))
+		} else {
+			break
+		}
+	}
 }
 
-func request(url string) {
-	r := robots.NewRobot()
+func request(url string, results chan []string) {
+	r := robots.NewRobot(results)
 
+	r.RegisterParser(&parser.URLParser{})
 	r.RegisterParser(&parser.EmailParser{})
 
 	if err := r.Open(url); err != nil {

@@ -1,20 +1,21 @@
 package robots
 
 import (
-	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/bodokaiser/gerenuk/parser"
 )
 
 type Robot struct {
+	results chan []string
 	parsers []parser.Parser
 }
 
-func NewRobot() *Robot {
-	return &Robot{}
+func NewRobot(r chan []string) *Robot {
+	p := []parser.Parser{}
+
+	return &Robot{r, p}
 }
 
 func (r *Robot) Open(url string) error {
@@ -27,7 +28,11 @@ func (r *Robot) Open(url string) error {
 	for i := 0; i < len(r.parsers); i++ {
 		io.Copy(r.parsers[i], res.Body)
 
-		fmt.Printf("Results of parser: %s", strings.Join(r.parsers[i].Result(), ", "))
+		r.results <- r.parsers[i].Result()
+
+		if i == len(r.parsers)-1 {
+			close(r.results)
+		}
 	}
 
 	return nil
