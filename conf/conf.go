@@ -20,11 +20,11 @@ func (c Conf) Flags() error {
 	flag.Parse()
 
 	if len(e) == 0 {
-		return errors.New(`"entry" argument is mandatory.`)
+		return errors.New(`entry url argument is mandatory.`)
 	}
 
+	c["url"] = e
 	c["addr"] = *a
-	c["entry"] = e
 
 	return nil
 }

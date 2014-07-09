@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/bodokaiser/gerenuk/conf"
-	"github.com/bodokaiser/gerenuk/robot"
+	"github.com/bodokaiser/gerenuk/parser"
+	"github.com/bodokaiser/gerenuk/robots"
 )
 
 func main() {
@@ -22,12 +21,12 @@ func main() {
 	time.Sleep(5 * time.Second)
 }
 
-func request(url string) error {
-	r := robot.New()
+func request(url string) {
+	r := robots.NewRobot()
 
-	r.Handle(func(r *http.Response) {
-		fmt.Printf("Got response: %v", r)
-	})
+	r.RegisterParser(&parser.EmailParser{})
 
-	r.Open(url)
+	if err := r.Open(url); err != nil {
+		log.Fatal(err)
+	}
 }

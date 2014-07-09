@@ -1,6 +1,7 @@
 package robots
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/bodokaiser/gerenuk/parser"
@@ -22,12 +23,12 @@ func (r *Robot) Open(url string) error {
 	}
 
 	for i := 0; i < len(r.parsers); i++ {
-		r.parsers[i](res)
+		io.Copy(r.parsers[i], res.Body)
 	}
 
 	return nil
 }
 
-func (r *Robot) Register(p parser.Parser) {
+func (r *Robot) RegisterParser(p parser.Parser) {
 	r.parsers = append(r.parsers, p)
 }
