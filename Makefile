@@ -1,11 +1,11 @@
 SHELL := /bin/bash
 
-boot: install
+boot:
 	@go run main.go \
 		--addr :3000 \
 		http://www.google.com/search?q=Hello+World
 
-install:
-	@go get github.com/puerkitobio/goquery
+test-parser:
+	@go test -v ./parser
 
 .PHONY: test
