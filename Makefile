@@ -7,7 +7,7 @@ boot:
 test:
 	@go test ./...
 
-test-parser:
-	@go test -v ./parser
+test-split:
+	@go test -v ./split/...
 
-.PHONY: test-parser
+.PHONY: test-split
