@@ -3,68 +3,79 @@ package robot
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/bodokaiser/gerenuk/parser"
 )
 
 type Robot struct {
-	splitter []bufio.SplitFunc
-
-	Results chan string
+	parsers []parser.New
 }
 
-func NewRobot(h ...bufio.SplitFunc) *Robot {
-	r := make(chan string)
+type Handle func(parser.Result)
 
-	return &Robot{h, r}
+func NewRobot(p ...parser.New) *Robot {
+	return &Robot{p}
 }
 
-func (r *Robot) Open(url string) error {
+func (r *Robot) Open(url string, h Handle) error {
 	res, err := http.Get(url)
 
 	if err != nil {
 		return err
 	}
 
-	go parse(res.Body, r.splitter, r.Results)
+	l := len(r.parsers)
+
+	in := make([]chan []byte, l)
+	out := make(chan parser.Result)
+
+	for i := 0; i < l; i++ {
+		in[i] = make(chan []byte)
+
+		go spawn(r.parsers[i], in[i], out)
+	}
+
+	go read(res.Body, in)
+
+	for r := range out {
+		h(r)
+	}
 
 	return nil
 }
 
-func parse(r io.Reader, h []bufio.SplitFunc, o chan string) {
-	channels := make([]chan []byte, len(h))
-
-	for i, h := range h {
-		channels[i] = make(chan []byte)
-
-		go spawn(i, h, channels[i], o)
-	}
-
+func read(r io.Reader, in []chan []byte) {
 	s := bufio.NewScanner(r)
 
 	for s.Scan() {
-		src := s.Bytes()
-		dst := make([]byte, len(src))
+		b := s.Bytes()
 
-		copy(dst, src)
-
-		for _, c := range channels {
-			c <- dst
+		for _, in := range in {
+			in <- b
 		}
 	}
 }
 
-func spawn(n int, h bufio.SplitFunc, i chan []byte, o chan string) {
-	for b := range i {
-		r := bytes.NewBuffer(b)
-		s := bufio.NewScanner(r)
-		s.Split(h)
+func spawn(p parser.New, in chan []byte, out chan parser.Result) {
+	for b := range in {
+		r := bytes.NewReader(b)
 
-		for s.Scan() {
-			t := s.Text()
+		parse(p(r), out)
+	}
 
-			o <- fmt.Sprintf("%d: %s", n, t)
+	close(out)
+}
+
+func parse(p parser.Parser, out chan parser.Result) {
+	for {
+		r := p.Next()
+
+		if r == nil {
+			break
 		}
+
+		out <- r
 	}
 }
