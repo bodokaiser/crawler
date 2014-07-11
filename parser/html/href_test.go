@@ -8,30 +8,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestHrefResult(t *testing.T) {
-	Convey("Given byte array macro", t, func() {
-		result := &HrefResult{
-			macro: []byte(`mailto`),
-			value: []byte(`me@foo.org`),
-		}
-
-		Convey("Macro()", func() {
-			macro := result.Macro()
-
-			Convey("Should return macro", func() {
-				So(macro, ShouldEqual, "mailto")
-			})
-		})
-		Convey("Value()", func() {
-			value := result.Value()
-
-			Convey("Should return value", func() {
-				So(value, ShouldEqual, "me@foo.org")
-			})
-		})
-	})
-}
-
 func TestHrefParser(t *testing.T) {
 	Convey("Given read stream without token", t, func() {
 		parser := NewHrefParser(strings.NewReader(`Hello World`))
@@ -54,9 +30,7 @@ func TestHrefParser(t *testing.T) {
 				So(result, ShouldNotBeNil)
 			})
 			Convey("Should return result", func() {
-				So(result, ShouldHaveSameTypeAs, &HrefResult{})
-				So(result.Macro(), ShouldEqual, "")
-				So(result.Value(), ShouldEqual, "/about.html")
+				So(result.String(), ShouldEqual, "/about.html")
 			})
 		})
 	})
@@ -70,9 +44,7 @@ func TestHrefParser(t *testing.T) {
 				So(result, ShouldNotBeNil)
 			})
 			Convey("Should return result", func() {
-				So(result, ShouldHaveSameTypeAs, &HrefResult{})
-				So(result.Macro(), ShouldEqual, "mailto")
-				So(result.Value(), ShouldEqual, "me@example.org")
+				So(result.String(), ShouldEqual, "mailto:me@example.org")
 			})
 		})
 	})

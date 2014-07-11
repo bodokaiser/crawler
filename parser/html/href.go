@@ -11,47 +11,26 @@ import (
 var (
 	hrefPrefix = []byte(`href="`)
 	hrefSuffix = []byte(`"`)
-	hrefMacro  = []byte(`:`)
 )
-
-type HrefResult struct {
-	macro []byte
-	value []byte
-}
-
-func (r *HrefResult) Macro() string {
-	return string(r.macro)
-}
-
-func (r *HrefResult) Value() string {
-	return string(r.value)
-}
 
 type HrefParser struct {
 	scanner *bufio.Scanner
 }
 
-func NewHrefParser(r io.Reader) parser.Parser {
+func NewHrefParser(r io.Reader) *HrefParser {
 	s := bufio.NewScanner(r)
 	s.Split(ScanHref)
 
 	return &HrefParser{s}
 }
 
-func (p *HrefParser) Next() parser.Result {
+func (p *HrefParser) Next() *parser.Result {
 	s := p.scanner
 
 	for s.Scan() {
 		b := s.Bytes()
 
-		var m []byte
-
-		if i := bytes.Index(b, hrefMacro); i != -1 {
-			m = b[:i]
-			b = b[i+1:]
-		}
-
-		return &HrefResult{m, b}
+		return &parser.Result{b}
 	}
 
 	return nil

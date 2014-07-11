@@ -4,25 +4,47 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/bodokaiser/gerenuk/parser"
+	"github.com/bodokaiser/gerenuk/httpd"
 	"github.com/bodokaiser/gerenuk/parser/html"
-	"github.com/bodokaiser/gerenuk/robot"
 )
 
 func main() {
-	r := robot.NewRobot(html.NewHrefParser)
+	request("http://www.satisfeet.me")
+}
 
-	if err := r.Open("http://www.satisfeet.me", handle); err != nil {
+func request(u string) {
+	c := httpd.NewClient(u)
+
+	c.Handle(parse)
+	c.Handle(follow)
+
+	if err := c.Open(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func handle(r parser.Result) {
-	switch r := r.(type) {
-	case *html.HrefResult:
-		fmt.Printf("result: %s with macro: %s\n", r.Value(), r.Macro())
-		break
-	default:
-		fmt.Printf("result: %s\n", r.Value())
+func parse(cr *httpd.ClientResult) {
+	p := html.NewHrefParser(cr.Body)
+
+	for {
+		r := p.Next()
+
+		if r == nil {
+			break
+		}
+
+		fmt.Printf("%s href: %s\n", cr.Host, r.String())
+	}
+}
+
+func follow(cr *httpd.ClientResult) {
+	p := html.NewHrefParser(cr.Body)
+
+	for {
+		r := p.Next()
+
+		if r == nil {
+			break
+		}
 	}
 }
