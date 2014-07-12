@@ -6,7 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestHrefResult(t *testing.T) {
+func TestResult(t *testing.T) {
 	Convey("Given byte array", t, func() {
 		result := &Result{[]byte(`me@foo.org`)}
 

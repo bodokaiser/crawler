@@ -7,7 +7,10 @@ boot:
 test:
 	@go test ./...
 
+test-httpd:
+	@go test -v ./httpd/...
+
 test-parser:
 	@go test -v ./parser/...
 
-.PHONY: test-parser
+.PHONY: test-httpd test-parser
