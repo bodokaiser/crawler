@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bodokaiser/gerenuk/httpd"
 	"github.com/bodokaiser/gerenuk/parser/html"
@@ -10,6 +12,8 @@ import (
 
 func main() {
 	request("http://www.satisfeet.me")
+
+	time.Sleep(10 * time.Second)
 }
 
 func request(u string) {
@@ -45,6 +49,15 @@ func follow(cr *httpd.ClientResult) {
 
 		if r == nil {
 			break
+		}
+
+		/*
+			if bytes.IndexRune(r.Value, '/') == 0 {
+				go request("http://" + cr.Host + r.String())
+			}
+		*/
+		if bytes.HasPrefix(r.Value, []byte("http")) {
+			go request(r.String())
 		}
 	}
 }

@@ -30,6 +30,8 @@ func NewClient(url string) *Client {
 func (c *Client) Open() error {
 	r, err := http.DefaultClient.Do(c.request)
 
+	defer r.Body.Close()
+
 	if err != nil {
 		return err
 	}
