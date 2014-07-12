@@ -1,44 +1,63 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
-	"strings"
+	"time"
 
-	"github.com/bodokaiser/gerenuk/conf"
-	"github.com/bodokaiser/gerenuk/parser"
-	"github.com/bodokaiser/gerenuk/robots"
+	"github.com/bodokaiser/gerenuk/httpd"
+	"github.com/bodokaiser/gerenuk/parser/html"
 )
 
 func main() {
-	c := conf.New()
+	request("http://www.satisfeet.me")
 
-	if err := c.Flags(); err != nil {
+	time.Sleep(10 * time.Second)
+}
+
+func request(u string) {
+	c := httpd.NewClient(u)
+
+	c.Handle(parse)
+	c.Handle(follow)
+
+	if err := c.Open(); err != nil {
 		log.Fatal(err)
-	}
-
-	r := make(chan []string)
-
-	go request(c["url"], r)
-
-	for {
-		result, ok := <-r
-
-		if ok {
-			fmt.Printf("\nResult: %s\n", strings.Join(result, ", "))
-		} else {
-			break
-		}
 	}
 }
 
-func request(url string, results chan []string) {
-	r := robots.NewRobot(results)
+func parse(cr *httpd.ClientResult) {
+	p := html.NewHrefParser(cr.Body)
 
-	r.RegisterParser(&parser.URLParser{})
-	r.RegisterParser(&parser.EmailParser{})
+	for {
+		r := p.Next()
 
-	if err := r.Open(url); err != nil {
-		log.Fatal(err)
+		if r == nil {
+			break
+		}
+
+		fmt.Printf("%s href: %s\n", cr.Host, r.String())
+	}
+}
+
+func follow(cr *httpd.ClientResult) {
+	p := html.NewHrefParser(cr.Body)
+
+	for {
+		r := p.Next()
+
+		if r == nil {
+			break
+		}
+
+		/*
+			if bytes.IndexRune(r.Value, '/') == 0 {
+				go request("http://" + cr.Host + r.String())
+			}
+		*/
+		if bytes.HasPrefix(r.Value, []byte("http")) {
+			go request(r.String())
+		}
 	}
 }
