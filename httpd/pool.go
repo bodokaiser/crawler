@@ -1,14 +1,17 @@
 package httpd
 
-import "net/http"
+import (
+	"net/http"
+	"sync/atomic"
+)
 
 var (
-	// Amount of requests which can be queued without
+	// Amount of requests which can be pendingd without
 	// getting a runtime error.
 	MaxPoolQueue = 1000
 
 	// Amount of go routines running in parallel to
-	// execute requests from the queue.
+	// execute requests from the pending.
 	MaxPoolWorker = 20
 )
 
@@ -21,21 +24,18 @@ type Pool struct {
 	// requests. It defaults to http.DefaultClient.
 	Client *http.Client
 
-	active int
-
+	active  int32
 	results chan *result
-	queue   chan *http.Request
+	pending chan *http.Request
 }
 
 // Returns an initialized Pool with defaults.
 func NewPool() *Pool {
 	return &Pool{
-		Client: http.DefaultClient,
-
-		active: 0,
-
+		Client:  http.DefaultClient,
+		active:  0,
 		results: make(chan *result, MaxPoolQueue),
-		queue:   make(chan *http.Request, MaxPoolQueue),
+		pending: make(chan *http.Request, MaxPoolQueue),
 	}
 }
 
@@ -46,31 +46,32 @@ func (p *Pool) Get() (*http.Request, *http.Response, error) {
 	for {
 		select {
 		case r := <-p.results:
+			atomic.AddInt32(&p.active, -1)
+
 			return r.Request, r.Response, r.Error
 		default:
-			if p.active < 1 {
+			if atomic.LoadInt32(&p.active) == 0 {
 				return nil, nil, nil
 			}
 		}
 	}
 }
 
-// Do adds a request to the pools queue.
+// Do adds a request to the pools pending.
 func (p *Pool) Add(r *http.Request) {
-	p.active++
-	p.queue <- r
+	atomic.AddInt32(&p.active, 1)
+
+	p.pending <- r
 }
 
-// Run spawns some workers which will process requests in queue.
+// Run spawns some workers which will process requests in pending.
 func (p *Pool) Run() {
 	for i := 0; i < MaxPoolWorker; i++ {
 		go func() {
-			for req := range p.queue {
+			for req := range p.pending {
 				res, err := p.Client.Do(req)
 
 				p.results <- &result{err, req, res}
-
-				p.active--
 			}
 		}()
 	}
