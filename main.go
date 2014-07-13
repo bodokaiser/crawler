@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/parser/html"
+	"github.com/bodokaiser/gerenuk/utils"
 )
 
 func main() {
@@ -25,19 +26,16 @@ func main() {
 			log.Fatal(err)
 		}
 
-		href := html.NewHrefParser(res.Body)
+		s := bufio.NewScanner(res.Body)
+		s.Split(utils.ScanHref)
 
-		for {
-			r := href.Next()
+		for s.Scan() {
+			t := s.Text()
 
-			if r == nil {
-				break
-			}
+			fmt.Printf("%s href: %s\n", req.Host, t)
 
-			fmt.Printf("%s href: %s\n", req.Host, r.String())
-
-			if bytes.HasPrefix(r.Value, []byte("http")) {
-				req, _ := http.NewRequest("GET", r.String(), nil)
+			if strings.HasPrefix(t, "http") {
+				req, _ := http.NewRequest("GET", t, nil)
 
 				p.Add(req)
 			}

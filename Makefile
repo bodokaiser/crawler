@@ -10,7 +10,7 @@ test:
 test-httpd:
 	@go test -v ./httpd/...
 
-test-parser:
-	@go test -v ./parser/...
+test-utils:
+	@go test -v ./utils/...
 
-.PHONY: test-httpd test-parser
+.PHONY: test-httpd test-utils
