@@ -5,13 +5,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/bodokaiser/gerenuk/conf"
 	"github.com/bodokaiser/gerenuk/httpd"
 	"github.com/bodokaiser/gerenuk/utils"
 )
 
 func main() {
+	c := conf.NewConf()
+
+	if err := c.Parse(os.Args); err != nil {
+		log.Fatal(err)
+	}
+
 	req, _ := http.NewRequest("GET", "http://www.google.com", nil)
 
 	p := httpd.NewPool()

@@ -7,6 +7,9 @@ boot:
 test:
 	@go test ./...
 
+test-conf:
+	@go test -v ./conf/...
+
 test-httpd:
 	@go test -v ./httpd/...
 
