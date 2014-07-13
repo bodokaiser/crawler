@@ -2,15 +2,18 @@ package httpd
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 var (
-	request1, _ = http.NewRequest("GET", "http://www.google.de", nil)
-	request2, _ = http.NewRequest("GET", "http://www.google.com", nil)
-	request3, _ = http.NewRequest("GET", "http://iam.notexistent", nil)
+	server = httptest.NewServer(http.HandlerFunc(Handle))
+
+	request1, _ = http.NewRequest("GET", server.URL, nil)
+	request2, _ = http.NewRequest("GET", server.URL, nil)
+	request3, _ = http.NewRequest("GET", "error.dns", nil)
 )
 
 func TestPool(t *testing.T) {
@@ -44,7 +47,7 @@ func TestPool(t *testing.T) {
 			})
 			Convey("Should return request", func() {
 				So(req, ShouldHaveSameTypeAs, &http.Request{})
-				So(req.Host, ShouldEqual, "www.google.de")
+				So(req.URL.String(), ShouldEqual, server.URL)
 			})
 			Convey("Should return response", func() {
 				So(res, ShouldHaveSameTypeAs, &http.Response{})
@@ -80,7 +83,7 @@ func TestPool(t *testing.T) {
 			})
 			Convey("Should return request", func() {
 				So(req, ShouldHaveSameTypeAs, &http.Request{})
-				So(req.Host, ShouldEqual, "www.google.de")
+				So(req.URL.String(), ShouldEqual, server.URL)
 			})
 			Convey("Should return response", func() {
 				So(res, ShouldHaveSameTypeAs, &http.Response{})
@@ -95,7 +98,7 @@ func TestPool(t *testing.T) {
 				})
 				Convey("Should return request", func() {
 					So(req, ShouldHaveSameTypeAs, &http.Request{})
-					So(req.Host, ShouldEqual, "www.google.com")
+					So(req.URL.String(), ShouldEqual, server.URL)
 				})
 				Convey("Should return response", func() {
 					So(res, ShouldHaveSameTypeAs, &http.Response{})
@@ -130,11 +133,14 @@ func TestPool(t *testing.T) {
 			})
 			Convey("Should return no request", func() {
 				So(req, ShouldHaveSameTypeAs, &http.Request{})
-				So(req.Host, ShouldEqual, "iam.notexistent")
 			})
 			Convey("Should return no response", func() {
 				So(res, ShouldBeNil)
 			})
 		})
 	})
+}
+
+func Handle(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
 }
