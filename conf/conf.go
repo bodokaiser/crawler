@@ -1,32 +1,28 @@
 package conf
 
-import (
-	"errors"
-	"net/url"
-)
+import "flag"
 
-var (
-	MissingEntryArgument = errors.New("Please pass a entry url as argument.")
-	InvalidEntryArgument = errors.New("Please pass a valid entry url as argument.")
-)
-
-type Conf map[string]string
-
-func NewConf() Conf {
-	return Conf{}
+type Conf struct {
+	Entry   string
+	Address string
 }
 
-func (c Conf) Parse(a []string) error {
-	e := a[len(a)-1]
+func NewConf() *Conf {
+	return &Conf{}
+}
 
-	if len(e) < 8 {
-		return MissingEntryArgument
-	}
-	if _, err := url.Parse(e); err != nil {
-		return InvalidEntryArgument
+func (c *Conf) Parse(args []string) error {
+	s := flag.NewFlagSet("default", flag.ContinueOnError)
+
+	e := s.String("entry", "", "The URL of the first website to crawl.")
+	a := s.String("address", "", "The address of the http server to listen.")
+
+	if err := s.Parse(args[1:]); err != nil {
+		return err
 	}
 
-	c["entry"] = e
+	c.Entry = *e
+	c.Address = *a
 
 	return nil
 }

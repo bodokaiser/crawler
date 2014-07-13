@@ -1,8 +1,7 @@
 SHELL := /bin/bash
 
 boot:
-	@go run main.go \
-		http://www.google.com/
+	@go run main.go
 
 test:
 	@go test ./...

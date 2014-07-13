@@ -15,12 +15,23 @@ import (
 
 func main() {
 	c := conf.NewConf()
+	s := httpd.NewServer()
 
 	if err := c.Parse(os.Args); err != nil {
 		log.Fatal(err)
 	}
 
-	req, _ := http.NewRequest("GET", "http://www.google.com", nil)
+	if len(c.Entry) != 0 {
+		crawl(c.Entry)
+	}
+
+	if len(c.Address) != 0 {
+		s.Listen(c.Address)
+	}
+}
+
+func crawl(url string) {
+	req, _ := http.NewRequest("GET", url, nil)
 
 	p := httpd.NewPool()
 
