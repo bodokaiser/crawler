@@ -1,63 +1,54 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"log"
-	"time"
+	"net/http"
+	"os"
+	"strings"
 
+	"github.com/bodokaiser/gerenuk/conf"
 	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/parser/html"
+	"github.com/bodokaiser/gerenuk/utils"
 )
 
 func main() {
-	request("http://www.satisfeet.me")
+	c := conf.NewConf()
 
-	time.Sleep(10 * time.Second)
-}
-
-func request(u string) {
-	c := httpd.NewClient(u)
-
-	c.Handle(parse)
-	c.Handle(follow)
-
-	if err := c.Open(); err != nil {
+	if err := c.Parse(os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
 
-func parse(cr *httpd.ClientResult) {
-	p := html.NewHrefParser(cr.Body)
+	req, _ := http.NewRequest("GET", "http://www.google.com", nil)
 
-	for {
-		r := p.Next()
+	p := httpd.NewPool()
 
-		if r == nil {
-			break
-		}
-
-		fmt.Printf("%s href: %s\n", cr.Host, r.String())
-	}
-}
-
-func follow(cr *httpd.ClientResult) {
-	p := html.NewHrefParser(cr.Body)
+	p.Add(req)
+	p.Run()
 
 	for {
-		r := p.Next()
+		req, res, err := p.Get()
 
-		if r == nil {
-			break
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		/*
-			if bytes.IndexRune(r.Value, '/') == 0 {
-				go request("http://" + cr.Host + r.String())
+		s := bufio.NewScanner(res.Body)
+		s.Split(utils.ScanHref)
+
+		for s.Scan() {
+			t := s.Text()
+
+			fmt.Printf("%s href: %s\n", req.Host, t)
+
+			if strings.HasPrefix(t, "http") {
+				req, _ := http.NewRequest("GET", t, nil)
+
+				p.Add(req)
 			}
-		*/
-		if bytes.HasPrefix(r.Value, []byte("http")) {
-			go request(r.String())
 		}
+
+		res.Body.Close()
 	}
 }

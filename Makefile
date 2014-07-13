@@ -7,7 +7,13 @@ boot:
 test:
 	@go test ./...
 
-test-parser:
-	@go test -v ./parser/...
+test-conf:
+	@go test -v ./conf/...
 
-.PHONY: test-parser
+test-httpd:
+	@go test -v ./httpd/...
+
+test-utils:
+	@go test -v ./utils/...
+
+.PHONY: test-httpd test-utils
