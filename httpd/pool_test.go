@@ -8,15 +8,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var (
-	server = httptest.NewServer(http.HandlerFunc(Handle))
-
-	request1, _ = http.NewRequest("GET", server.URL, nil)
-	request2, _ = http.NewRequest("GET", server.URL, nil)
-	request3, _ = http.NewRequest("GET", "error.dns", nil)
-)
-
 func TestPool(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(Handle))
+
+	request1, _ := http.NewRequest("GET", server.URL, nil)
+	request2, _ := http.NewRequest("GET", server.URL, nil)
+	request3, _ := http.NewRequest("GET", "error.dns", nil)
+
 	Convey("Given an empty pool", t, func() {
 		p := NewPool()
 
