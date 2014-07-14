@@ -63,9 +63,9 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 				s.Split(utils.ScanHref)
 
 				for s.Scan() {
-					httpd.SendEvent(w, "message", s.Text())
+					httpd.SendEvent(w, s.Text())
 
-					if strings.HasPrefix(s.Text(), "http") {
+					if strings.HasPrefix(s.Text(), "http") && false {
 						req, _ := http.NewRequest("GET", s.Text(), nil)
 
 						p.Add(req)

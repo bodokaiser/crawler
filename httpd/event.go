@@ -40,8 +40,8 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Server Sent Events not supported!", http.StatusInternalServerError)
 }
 
-func SendEvent(w http.ResponseWriter, n string, m string) {
-	fmt.Fprintf(w, "data: %s: %s\n\n", n, m)
+func SendEvent(w http.ResponseWriter, m string) {
+	fmt.Fprintf(w, "data: %s\n\n", m)
 
 	w.(http.Flusher).Flush()
 }

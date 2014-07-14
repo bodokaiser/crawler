@@ -14,10 +14,10 @@ func TestSendEvent(t *testing.T) {
 		res := httptest.NewRecorder()
 
 		Convey("SendEvent()", func() {
-			SendEvent(res, "message", "Hello World")
+			SendEvent(res, "Hello World")
 
 			Convey("Should write as event stream", func() {
-				So(res.Body.String(), ShouldEqual, "data: message: Hello World\n\n")
+				So(res.Body.String(), ShouldEqual, "data: Hello World\n\n")
 			})
 		})
 	})

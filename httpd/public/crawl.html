@@ -1,11 +1,40 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Generuk</title>
+	  <title>Generuk</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" />
 	</head>
-	<body>
-    <h1>Results:</h1>
-    <ul></ul>
-    <script src="/javascripts/script.js"></script>
+  <body>
+    <div class="jumbotron">
+      <div class="container">
+        <div class="row">
+          <div class="col-xs-8 col-xs-offset-2">
+            <h1 class="text-center">Welcome to Generuk!</h1>
+            <p class="text-center">
+              <strong>Generuk</strong> is a high performance web crawler written
+              in <a href="http://golang.org">Go</a>.
+            </p>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 60px">
+          <div class="col-xs-6 col-xs-offset-3">
+            <div class="list-group" id="results"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      var ul = document.querySelector('#results')
+
+      new EventSource('/events').addEventListener('message', function(e) {
+        console.dir(e.data)
+
+        var html = '<a class="list-group-item" href="' + e.data + '">'
+        html += e.data
+        html += '</a>'
+
+        ul.innerHTML += html
+      })
+    </script>
 	</body>
 </html>
