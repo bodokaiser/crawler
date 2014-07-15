@@ -8,14 +8,15 @@ import (
 	"net/url"
 	"strings"
 
-	httpd "github.com/bodokaiser/gerenuk/net/http"
+	ghttp "github.com/bodokaiser/gerenuk/net/http"
+	gurl "github.com/bodokaiser/gerenuk/net/url"
 	"github.com/bodokaiser/gerenuk/text/html"
 )
 
 var (
-	fs = http.FileServer(http.Dir("httpd/public"))
+	fs = http.FileServer(http.Dir("net/http/public"))
 
-	ev = httpd.NewEventHandler(connect)
+	ev = ghttp.NewEventHandler(connect)
 )
 
 func main() {
@@ -45,12 +46,14 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 	if req, err := http.NewRequest("GET", url, nil); err == nil {
 		log.Printf("Starting to crawl: %s\n", url)
 
-		p := httpd.NewPool()
-		p.Add(req)
-		p.Run()
+		list := gurl.NewList()
+		pool := ghttp.NewPool()
+		list.Add(url)
+		pool.Add(req)
+		pool.Run()
 
 		for {
-			_, res, err := p.Get()
+			_, res, err := pool.Get()
 
 			if err != nil {
 				log.Fatal(err)
@@ -63,15 +66,20 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 				s.Split(html.ScanHref)
 
 				for s.Scan() {
-					httpd.SendEvent(w, s.Text())
+					t := s.Text()
 
-					if strings.HasPrefix(s.Text(), "http") && false {
-						req, _ := http.NewRequest("GET", s.Text(), nil)
-
-						p.Add(req)
+					if strings.HasPrefix(t, "/") {
+						req.URL.Path = t
+						t = req.URL.String()
 					}
+					if strings.HasPrefix(t, "http") && !list.Has(t) {
+						req, _ := http.NewRequest("GET", t, nil)
 
-					f.Flush()
+						list.Add(t)
+						pool.Add(req)
+
+						ghttp.SendEvent(w, t)
+					}
 				}
 
 				res.Body.Close()

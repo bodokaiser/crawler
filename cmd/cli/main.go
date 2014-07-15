@@ -4,64 +4,61 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/bodokaiser/gerenuk/net/httpd"
+	ghttp "github.com/bodokaiser/gerenuk/net/http"
+	"github.com/bodokaiser/gerenuk/net/url"
 	"github.com/bodokaiser/gerenuk/text/html"
 )
 
 var (
-	pool *httpd.Pool
+	pool = ghttp.NewPool()
+	list = url.NewList()
 )
 
 func main() {
-	req, err := request()
+	url := flag.String("url", "", "URL to crawl.")
+	flag.Parse()
+
+	req, err := http.NewRequest("GET", *url, nil)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	pool = httpd.NewPool()
+	list.Add(req.URL.String())
 	pool.Add(req)
 	pool.Run()
 
 	for {
-		_, res, err := pool.Get()
+		req, res, err := pool.Get()
 
 		if err != nil {
 			log.Fatal()
 		}
 
-		scan(res.Body)
+		s := bufio.NewScanner(res.Body)
+		s.Split(html.ScanHref)
+
+		for s.Scan() {
+			t := s.Text()
+
+			if strings.HasPrefix(t, "/") {
+				req.URL.Path = t
+				t = req.URL.String()
+			}
+			if strings.HasPrefix(t, "http") && !list.Has(t) {
+				req, _ := http.NewRequest("GET", t, nil)
+
+				list.Add(t)
+				pool.Add(req)
+
+				fmt.Printf("Found url: %s\n", t)
+			}
+		}
 
 		res.Body.Close()
 	}
-}
-
-func scan(r io.Reader) {
-	s := bufio.NewScanner(r)
-	s.Split(html.ScanHref)
-
-	for s.Scan() {
-		t := s.Text()
-
-		fmt.Printf("href: %s\n", t)
-
-		if strings.HasPrefix(t, "http") {
-			req, _ := http.NewRequest("GET", t, nil)
-
-			pool.Add(req)
-		}
-	}
-}
-
-func request() (*http.Request, error) {
-	url := flag.String("url", "", "URL to crawl.")
-
-	flag.Parse()
-
-	return http.NewRequest("GET", *url, nil)
 }
