@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	fs = http.FileServer(http.Dir("net/http/public"))
+	fs = http.FileServer(http.Dir("srv"))
 
 	ev = ghttp.NewEventHandler(connect)
 )
@@ -77,8 +77,11 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 
 						list.Add(t)
 						pool.Add(req)
+					}
+					if strings.HasPrefix(t, "mailto:") {
+						i := strings.IndexRune(t, ':') + 1
 
-						ghttp.SendEvent(w, t)
+						ghttp.SendEvent(w, t[i:])
 					}
 				}
 

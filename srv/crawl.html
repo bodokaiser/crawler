@@ -9,10 +9,9 @@
       <div class="container">
         <div class="row">
           <div class="col-xs-8 col-xs-offset-2">
-            <h1 class="text-center">Welcome to Generuk!</h1>
+            <h1 class="text-center">Generuk is harvesting!</h1>
             <p class="text-center">
-              <strong>Generuk</strong> is a high performance web crawler written
-              in <a href="http://golang.org">Go</a>.
+              Because of too much data we only stream emails for now.
             </p>
           </div>
         </div>
@@ -24,16 +23,10 @@
       </div>
     </div>
     <script>
-      var ul = document.querySelector('#results')
+      var list = document.querySelector('#results')
 
       new EventSource('/events').addEventListener('message', function(e) {
-        console.dir(e.data)
-
-        var html = '<a class="list-group-item" href="' + e.data + '">'
-        html += e.data
-        html += '</a>'
-
-        ul.innerHTML += html
+        list.innerHTML += '<a class="list-group-item" href=mailto:"' + e.data + '">' + e.data + '</a>';
       })
     </script>
 	</body>
