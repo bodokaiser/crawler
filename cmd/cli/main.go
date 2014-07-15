@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/utils"
+	"github.com/bodokaiser/gerenuk/net/httpd"
+	"github.com/bodokaiser/gerenuk/text/html"
 )
 
 var (
@@ -43,7 +43,7 @@ func main() {
 
 func scan(r io.Reader) {
 	s := bufio.NewScanner(r)
-	s.Split(utils.ScanHref)
+	s.Split(html.ScanHref)
 
 	for s.Scan() {
 		t := s.Text()

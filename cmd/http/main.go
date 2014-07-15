@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/utils"
+	httpd "github.com/bodokaiser/gerenuk/net/http"
+	"github.com/bodokaiser/gerenuk/text/html"
 )
 
 var (
@@ -60,7 +60,7 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 
 			if res != nil {
 				s := bufio.NewScanner(res.Body)
-				s.Split(utils.ScanHref)
+				s.Split(html.ScanHref)
 
 				for s.Scan() {
 					httpd.SendEvent(w, s.Text())

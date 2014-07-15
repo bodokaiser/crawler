@@ -3,11 +3,11 @@ SHELL := /bin/bash
 test:
 	@go test ./...
 
-test-httpd:
-	@go test -v ./httpd/...
+test-net:
+	@go test -v ./net/...
 
-test-utils:
-	@go test -v ./utils/...
+test-text:
+	@go test -v ./text/...
 
 cmd-cli:
 	@go run ./cmd/cli/main.go \
@@ -16,4 +16,4 @@ cmd-cli:
 cmd-http:
 	@go run ./cmd/http/main.go
 
-.PHONY: test-httpd test-utils
+.PHONY: test-net text-text
