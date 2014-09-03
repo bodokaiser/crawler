@@ -8,26 +8,25 @@ import (
 	"net/url"
 	"strings"
 
-	ghttp "github.com/bodokaiser/gerenuk/net/http"
-	gurl "github.com/bodokaiser/gerenuk/net/url"
-	"github.com/bodokaiser/gerenuk/text/html"
+	"github.com/bodokaiser/gerenuk/httpd"
+	"github.com/bodokaiser/gerenuk/parser/html"
+	"github.com/bodokaiser/gerenuk/store"
 )
 
-var (
-	fs = http.FileServer(http.Dir("srv"))
+var host string
 
-	ev = ghttp.NewEventHandler(connect)
-)
+var fs = http.FileServer(http.Dir("share"))
+
+var ev = httpd.NewEventHandler(connect)
 
 func main() {
-	host := flag.String("host", ":3000", "The host to listen on.")
-
+	flag.StringVar(&host, "host", ":3000", "The host to listen on.")
 	flag.Parse()
 
 	http.Handle("/", fs)
 	http.Handle("/events", ev)
 
-	http.ListenAndServe(*host, nil)
+	http.ListenAndServe(host, nil)
 }
 
 func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
@@ -46,8 +45,8 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 	if req, err := http.NewRequest("GET", url, nil); err == nil {
 		log.Printf("Starting to crawl: %s\n", url)
 
-		list := gurl.NewList()
-		pool := ghttp.NewPool()
+		list := store.NewList()
+		pool := httpd.NewPool()
 		list.Add(url)
 		pool.Add(req)
 		pool.Run()
@@ -81,7 +80,7 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 					if strings.HasPrefix(t, "mailto:") {
 						i := strings.IndexRune(t, ':') + 1
 
-						ghttp.SendEvent(w, t[i:])
+						httpd.SendEvent(w, t[i:])
 					}
 				}
 

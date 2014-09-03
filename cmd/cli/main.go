@@ -8,21 +8,22 @@ import (
 	"net/http"
 	"strings"
 
-	ghttp "github.com/bodokaiser/gerenuk/net/http"
-	"github.com/bodokaiser/gerenuk/net/url"
-	"github.com/bodokaiser/gerenuk/text/html"
+	"github.com/bodokaiser/gerenuk/httpd"
+	"github.com/bodokaiser/gerenuk/parser/html"
+	"github.com/bodokaiser/gerenuk/store"
 )
 
-var (
-	pool = ghttp.NewPool()
-	list = url.NewList()
-)
+var url string
+
+var pool = httpd.NewPool()
+
+var list = store.NewList()
 
 func main() {
-	url := flag.String("url", "", "URL to crawl.")
+	flag.StringVar(&url, "url", "", "URL to crawl.")
 	flag.Parse()
 
-	req, err := http.NewRequest("GET", *url, nil)
+	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
 		log.Fatal(err)
