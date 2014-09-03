@@ -5,140 +5,87 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/check.v1"
 )
 
 func TestPool(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(Handle))
-
-	request1, _ := http.NewRequest("GET", server.URL, nil)
-	request2, _ := http.NewRequest("GET", server.URL, nil)
-	request3, _ := http.NewRequest("GET", "error.dns", nil)
-
-	Convey("Given an empty pool", t, func() {
-		p := NewPool()
-
-		Convey("Get()", func() {
-			req, res, err := p.Get()
-
-			Convey("Should return no error", func() {
-				So(err, ShouldBeNil)
-			})
-			Convey("Should return no request", func() {
-				So(req, ShouldBeNil)
-			})
-			Convey("Should return no response", func() {
-				So(res, ShouldBeNil)
-			})
-		})
-	})
-	Convey("Given a pool with one request", t, func() {
-		p := NewPool()
-		p.Add(request1)
-		p.Run()
-
-		Convey("Get()", func() {
-			req, res, err := p.Get()
-
-			Convey("Should return no error", func() {
-				So(err, ShouldBeNil)
-			})
-			Convey("Should return request", func() {
-				So(req, ShouldHaveSameTypeAs, &http.Request{})
-				So(req.URL.String(), ShouldEqual, server.URL)
-			})
-			Convey("Should return response", func() {
-				So(res, ShouldHaveSameTypeAs, &http.Response{})
-				So(res.StatusCode, ShouldEqual, 200)
-			})
-
-			Convey("Get()", func() {
-				req, res, err := p.Get()
-
-				Convey("Should return no error", func() {
-					So(err, ShouldBeNil)
-				})
-				Convey("Should return no request", func() {
-					So(req, ShouldBeNil)
-				})
-				Convey("Should return no response", func() {
-					So(res, ShouldBeNil)
-				})
-			})
-		})
-	})
-	Convey("Given a pool with two requests", t, func() {
-		p := NewPool()
-		p.Add(request1)
-		p.Add(request2)
-		p.Run()
-
-		Convey("Get()", func() {
-			req, res, err := p.Get()
-
-			Convey("Should return no error", func() {
-				So(err, ShouldBeNil)
-			})
-			Convey("Should return request", func() {
-				So(req, ShouldHaveSameTypeAs, &http.Request{})
-				So(req.URL.String(), ShouldEqual, server.URL)
-			})
-			Convey("Should return response", func() {
-				So(res, ShouldHaveSameTypeAs, &http.Response{})
-				So(res.StatusCode, ShouldEqual, 200)
-			})
-
-			Convey("Get()", func() {
-				req, res, err := p.Get()
-
-				Convey("Should return no error", func() {
-					So(err, ShouldBeNil)
-				})
-				Convey("Should return request", func() {
-					So(req, ShouldHaveSameTypeAs, &http.Request{})
-					So(req.URL.String(), ShouldEqual, server.URL)
-				})
-				Convey("Should return response", func() {
-					So(res, ShouldHaveSameTypeAs, &http.Response{})
-					So(res.StatusCode, ShouldEqual, 200)
-				})
-				Convey("Get()", func() {
-					req, res, err := p.Get()
-
-					Convey("Should return no error", func() {
-						So(err, ShouldBeNil)
-					})
-					Convey("Should return no request", func() {
-						So(req, ShouldBeNil)
-					})
-					Convey("Should return no response", func() {
-						So(res, ShouldBeNil)
-					})
-				})
-			})
-		})
-	})
-	Convey("Given a pool with a invalid request", t, func() {
-		p := NewPool()
-		p.Add(request3)
-		p.Run()
-
-		Convey("Get()", func() {
-			req, res, err := p.Get()
-
-			Convey("Should return error", func() {
-				So(err, ShouldNotBeNil)
-			})
-			Convey("Should return no request", func() {
-				So(req, ShouldHaveSameTypeAs, &http.Request{})
-			})
-			Convey("Should return no response", func() {
-				So(res, ShouldBeNil)
-			})
-		})
-	})
+	check.Suite(&PoolSuite{})
+	check.TestingT(t)
 }
 
-func Handle(w http.ResponseWriter, r *http.Request) {
+type PoolSuite struct {
+	pool   *Pool
+	server *httptest.Server
+}
+
+func (s *PoolSuite) SetUpSuite(c *check.C) {
+	s.server = httptest.NewServer(http.HandlerFunc(handle))
+}
+
+func (s *PoolSuite) SetUpTest(c *check.C) {
+	s.pool = NewPool()
+}
+
+func (s *PoolSuite) TestEmpty(c *check.C) {
+	req, res, err := s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req, check.IsNil)
+	c.Check(res, check.IsNil)
+}
+
+func (s *PoolSuite) TestSingle(c *check.C) {
+	request, _ := http.NewRequest("GET", s.server.URL, nil)
+
+	s.pool.Add(request)
+	s.pool.Run()
+
+	req, res, err := s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req.URL.String(), check.Equals, s.server.URL)
+	c.Check(res.StatusCode, check.Equals, http.StatusOK)
+
+	req, res, err = s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req, check.IsNil)
+	c.Check(res, check.IsNil)
+}
+
+func (s *PoolSuite) TestMultiple(c *check.C) {
+	request1, _ := http.NewRequest("GET", s.server.URL, nil)
+	request2, _ := http.NewRequest("GET", s.server.URL, nil)
+
+	s.pool.Add(request1)
+	s.pool.Add(request2)
+	s.pool.Run()
+
+	req, res, err := s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req.URL.String(), check.Equals, s.server.URL)
+	c.Check(res.StatusCode, check.Equals, http.StatusOK)
+
+	req, res, err = s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req.URL.String(), check.Equals, s.server.URL)
+	c.Check(res.StatusCode, check.Equals, http.StatusOK)
+
+	req, res, err = s.pool.Get()
+	c.Check(err, check.IsNil)
+	c.Check(req, check.IsNil)
+	c.Check(res, check.IsNil)
+}
+
+func (s *PoolSuite) TestInvalid(c *check.C) {
+	request, _ := http.NewRequest("GET", "error.dns", nil)
+
+	s.pool.Add(request)
+	s.pool.Run()
+
+	req, res, err := s.pool.Get()
+	c.Check(err, check.NotNil)
+	c.Check(req, check.NotNil)
+	c.Check(res, check.IsNil)
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }

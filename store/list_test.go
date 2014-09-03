@@ -3,31 +3,31 @@ package store
 import (
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/check.v1"
 )
 
 func TestList(t *testing.T) {
-	Convey("Given an empty list", t, func() {
-		list := NewList()
+	check.Suite(&ListSuite{})
+	check.TestingT(t)
+}
 
-		Convey("Has()", func() {
-			result := list.Has("http://www.google.com")
+type ListSuite struct {
+	list *List
+}
 
-			Convey("Should return false", func() {
-				So(result, ShouldBeFalse)
-			})
-		})
-	})
-	Convey("Given a list with item", t, func() {
-		list := NewList()
-		list.Add("http://www.example.org")
+func (s *ListSuite) SetUpTest(c *check.C) {
+	s.list = NewList()
+}
 
-		Convey("Has()", func() {
-			result := list.Has("http://www.EXAMPLE.org#hello")
+func (s *ListSuite) TestEmpty(c *check.C) {
+	res := s.list.Has("http://www.google.com")
 
-			Convey("Should return true", func() {
-				So(result, ShouldBeTrue)
-			})
-		})
-	})
+	c.Check(res, check.Equals, false)
+}
+
+func (s *ListSuite) TestSingle(c *check.C) {
+	s.list.Add("http://www.example.org")
+
+	res := s.list.Has("http://www.EXAMPLE.org#hello")
+	c.Check(res, check.Equals, true)
 }
