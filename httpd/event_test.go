@@ -1,10 +1,10 @@
 package httpd
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"gopkg.in/check.v1"
 )
@@ -19,32 +19,57 @@ type EventSuite struct {
 }
 
 func (s *EventSuite) SetUpTest(c *check.C) {
-	s.handler = NewEventHandler(func(w http.ResponseWriter, _ *http.Request, f http.Flusher) {
-		fmt.Fprintf(w, "data: message: %s\n\n", "Hello World")
-
-		f.Flush()
-	})
+	s.handler = NewEventHandler()
 }
 
-func (s *EventSuite) TestSendEvent(c *check.C) {
-	res := httptest.NewRecorder()
+func (s *EventSuite) TestEmpty(c *check.C) {
+	n, err := s.handler.Write([]byte("Hello"))
 
-	SendEvent(res, "Hello World")
-
-	c.Check(res.Body.String(), check.Equals, "data: Hello World\n\n")
+	c.Check(err, check.IsNil)
+	c.Check(n, check.Equals, 0)
 }
 
-func (s *EventSuite) TestServeHTTP(c *check.C) {
+func (s *EventSuite) TestSingle(c *check.C) {
 	req, _ := http.NewRequest("GET", "/", nil)
 	res := httptest.NewRecorder()
 
 	s.handler.ServeHTTP(res, req)
 
-	c.Check(res.Code, check.Equals, http.StatusOK)
+	n, err := s.handler.Write([]byte("Hello"))
+	c.Check(err, check.IsNil)
+	c.Check(n, check.Equals, 5)
 
-	c.Check(res.HeaderMap.Get("Connection"), check.Equals, "keep-alive")
-	c.Check(res.HeaderMap.Get("Content-Type"), check.Equals, "text/event-stream")
-	c.Check(res.HeaderMap.Get("Cache-Control"), check.Equals, "no-cache")
+	time.Sleep(time.Second)
 
-	c.Check(res.Body.String(), check.Equals, "data: message: Hello World\n\n")
+	s.checkResponse(c, res)
+}
+
+func (s *EventSuite) TestMultiple(c *check.C) {
+	req1, _ := http.NewRequest("GET", "/", nil)
+	req2, _ := http.NewRequest("GET", "/", nil)
+
+	res1 := httptest.NewRecorder()
+	res2 := httptest.NewRecorder()
+
+	s.handler.ServeHTTP(res1, req1)
+	s.handler.ServeHTTP(res2, req2)
+
+	n, err := s.handler.Write([]byte("Hello"))
+	c.Check(err, check.IsNil)
+	c.Check(n, check.Equals, 10)
+
+	time.Sleep(time.Second)
+
+	s.checkResponse(c, res1)
+	s.checkResponse(c, res2)
+}
+
+func (s *EventSuite) checkResponse(c *check.C, r *httptest.ResponseRecorder) {
+	c.Check(r.Code, check.Equals, http.StatusOK)
+
+	c.Check(r.HeaderMap.Get("Connection"), check.Equals, "keep-alive")
+	c.Check(r.HeaderMap.Get("Content-Type"), check.Equals, "text/event-stream")
+	c.Check(r.HeaderMap.Get("Cache-Control"), check.Equals, "no-cache")
+
+	c.Check(r.Body.String(), check.Equals, "data: Hello\n\n")
 }

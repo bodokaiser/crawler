@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,21 +16,22 @@ import (
 
 var host string
 
-var fs = http.FileServer(http.Dir("share"))
+// File Handler.
+var files = http.FileServer(http.Dir("share"))
 
-var ev = httpd.NewEventHandler(connect)
+// Event Handler.
+var event = httpd.NewEventHandler()
 
 func main() {
 	flag.StringVar(&host, "host", ":3000", "The host to listen on.")
 	flag.Parse()
 
-	http.Handle("/", fs)
-	http.Handle("/events", ev)
-
+	http.Handle("/", files)
+	http.Handle("/events", http.HandlerFunc(handle))
 	http.ListenAndServe(host, nil)
 }
 
-func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
+func handle(w http.ResponseWriter, r *http.Request) {
 	ref, err := url.Parse(r.Header.Get("Referer"))
 
 	if err != nil {
@@ -42,12 +44,15 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 		log.Fatal(err)
 	}
 
+	go event.ServeHTTP(w, r)
+
 	if req, err := http.NewRequest("GET", url, nil); err == nil {
 		log.Printf("Starting to crawl: %s\n", url)
 
 		list := store.NewList()
-		pool := httpd.NewPool()
 		list.Add(url)
+
+		pool := httpd.NewPool()
 		pool.Add(req)
 		pool.Run()
 
@@ -56,8 +61,6 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 
 			if err != nil {
 				log.Fatal(err)
-
-				return
 			}
 
 			if res != nil {
@@ -80,7 +83,8 @@ func connect(w http.ResponseWriter, r *http.Request, f http.Flusher) {
 					if strings.HasPrefix(t, "mailto:") {
 						i := strings.IndexRune(t, ':') + 1
 
-						httpd.SendEvent(w, t[i:])
+						fmt.Printf("write: %s\n", t[i:])
+						event.Write([]byte(t[i:]))
 					}
 				}
 

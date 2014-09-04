@@ -5,15 +5,13 @@ import (
 	"sync/atomic"
 )
 
-var (
-	// Amount of requests which can be pendingd without
-	// getting a runtime error.
-	MaxPoolQueue = 1000
+// Amount of requests which can be pendingd without
+// getting a runtime error.
+var MaxPoolQueue = 1000
 
-	// Amount of go routines running in parallel to
-	// execute requests from the pending.
-	MaxPoolWorker = 20
-)
+// Amount of go routines running in parallel to
+// execute requests from the pending.
+var MaxPoolWorker = 20
 
 // Pool can take HTTP requests and execute them in parallel.
 // By using Pool you avoid exponential go routine spawns which
