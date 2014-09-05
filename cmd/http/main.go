@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,9 +18,6 @@ var host string
 // File Handler.
 var files = http.FileServer(http.Dir("share"))
 
-// Event Handler.
-var event = httpd.NewEventHandler()
-
 func main() {
 	flag.StringVar(&host, "host", ":3000", "The host to listen on.")
 	flag.Parse()
@@ -32,19 +28,20 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
-	ref, err := url.Parse(r.Header.Get("Referer"))
+	event, err := httpd.NewEventStream(r, w)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	ref, err := url.Parse(r.Header.Get("Referer"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	url, err := url.QueryUnescape(ref.Query().Get("url"))
-
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	go event.ServeHTTP(w, r)
 
 	if req, err := http.NewRequest("GET", url, nil); err == nil {
 		log.Printf("Starting to crawl: %s\n", url)
@@ -58,7 +55,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 		for {
 			_, res, err := pool.Get()
-
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -83,8 +79,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 					if strings.HasPrefix(t, "mailto:") {
 						i := strings.IndexRune(t, ':') + 1
 
-						fmt.Printf("write: %s\n", t[i:])
-						event.Write([]byte(t[i:]))
+						event.Emit(t[i:])
 					}
 				}
 
