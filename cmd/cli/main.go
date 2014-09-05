@@ -1,65 +1,29 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
-	"strings"
 
-	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/parser/html"
-	"github.com/bodokaiser/gerenuk/store"
+	. "github.com/bodokaiser/gerenuk"
 )
 
 var url string
-
-var pool = httpd.NewPool()
-
-var list = store.NewList()
 
 func main() {
 	flag.StringVar(&url, "url", "", "URL to crawl.")
 	flag.Parse()
 
-	req, err := http.NewRequest("GET", url, nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	list.Add(req.URL.String())
-	pool.Add(req)
-	pool.Run()
+	c := NewCrawler(url)
 
 	for {
-		req, res, err := pool.Get()
-
+		url, err := c.Get()
 		if err != nil {
-			log.Fatal()
+			log.Fatalf("Error working: %s\n", err)
+
+			return
 		}
 
-		s := bufio.NewScanner(res.Body)
-		s.Split(html.ScanHref)
-
-		for s.Scan() {
-			t := s.Text()
-
-			if strings.HasPrefix(t, "/") {
-				req.URL.Path = t
-				t = req.URL.String()
-			}
-			if strings.HasPrefix(t, "http") && !list.Has(t) {
-				req, _ := http.NewRequest("GET", t, nil)
-
-				list.Add(t)
-				pool.Add(req)
-
-				fmt.Printf("Found url: %s\n", t)
-			}
-		}
-
-		res.Body.Close()
+		fmt.Printf("Visited: %s\n", url)
 	}
 }

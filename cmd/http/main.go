@@ -1,21 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
+	. "github.com/bodokaiser/gerenuk"
 	"github.com/bodokaiser/gerenuk/httpd"
-	"github.com/bodokaiser/gerenuk/parser/html"
-	"github.com/bodokaiser/gerenuk/store"
 )
 
 var host string
 
-// File Handler.
 var files = http.FileServer(http.Dir("share"))
 
 func main() {
@@ -30,62 +26,44 @@ func main() {
 func handle(w http.ResponseWriter, r *http.Request) {
 	event, err := httpd.NewEventStream(r, w)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error establishing event stream: %s.\n", err)
+
+		return
 	}
 
-	ref, err := url.Parse(r.Header.Get("Referer"))
+	c, err := NewCrawlerFromRequest(r)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error creating crawler from request: %s.\n", err)
+
+		return
 	}
 
-	url, err := url.QueryUnescape(ref.Query().Get("url"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	for {
+		url, err := c.Get()
+		if err != nil {
+			log.Fatalf("Error resolving pool result: %s.\n", err)
 
-	if req, err := http.NewRequest("GET", url, nil); err == nil {
-		log.Printf("Starting to crawl: %s\n", url)
-
-		list := store.NewList()
-		list.Add(url)
-
-		pool := httpd.NewPool()
-		pool.Add(req)
-		pool.Run()
-
-		for {
-			_, res, err := pool.Get()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			if res != nil {
-				s := bufio.NewScanner(res.Body)
-				s.Split(html.ScanHref)
-
-				for s.Scan() {
-					t := s.Text()
-
-					if strings.HasPrefix(t, "/") {
-						req.URL.Path = t
-						t = req.URL.String()
-					}
-					if strings.HasPrefix(t, "http") && !list.Has(t) {
-						req, _ := http.NewRequest("GET", t, nil)
-
-						list.Add(t)
-						pool.Add(req)
-					}
-					if strings.HasPrefix(t, "mailto:") {
-						i := strings.IndexRune(t, ':') + 1
-
-						event.Emit(t[i:])
-					}
-				}
-
-				res.Body.Close()
-			}
+			return
 		}
 
+		if err := event.Emit(url); err != nil {
+			log.Fatal("Error emitting event: %s.\n", err)
+
+			return
+		}
 	}
+}
+
+func NewCrawlerFromRequest(r *http.Request) (*Crawler, error) {
+	ref, err := url.Parse(r.Header.Get("Referer"))
+	if err != nil {
+		return nil, err
+	}
+
+	uri, err := url.QueryUnescape(ref.Query().Get("url"))
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCrawler(uri), nil
 }

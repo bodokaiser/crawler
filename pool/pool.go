@@ -36,6 +36,8 @@ func NewPool(w Worker) *Pool {
 // Blocks when values are pending.
 func (p *Pool) Get() interface{} {
 	if atomic.LoadInt32(&p.pending) > 0 {
+		atomic.AddInt32(&p.pending, -1)
+
 		return <-p.out
 	}
 
@@ -52,11 +54,15 @@ func (p *Pool) Put(i interface{}) {
 
 	if pen > act && act < int32(MaxWorker) {
 		go func(in <-chan interface{}, out chan<- interface{}, w Worker) {
-			select {
-			case i := <-in:
-				out <- w(i)
-			case <-time.After(MaxTimeout):
-				atomic.AddInt32(&p.active, -1)
+			for {
+				select {
+				case i := <-in:
+					out <- w(i)
+				case <-time.After(MaxTimeout):
+					atomic.AddInt32(&p.active, -1)
+
+					return
+				}
 			}
 		}(p.in, p.out, p.worker)
 

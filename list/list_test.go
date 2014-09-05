@@ -1,4 +1,4 @@
-package store
+package list
 
 import (
 	"testing"
@@ -20,14 +20,21 @@ func (s *ListSuite) SetUpTest(c *check.C) {
 }
 
 func (s *ListSuite) TestEmpty(c *check.C) {
-	res := s.list.Has("http://www.google.com")
+	item, err := NewItemFromUrl("http://www.google.com")
+	c.Check(err, check.IsNil)
 
+	res := s.list.Has(item)
 	c.Check(res, check.Equals, false)
 }
 
 func (s *ListSuite) TestSingle(c *check.C) {
-	s.list.Add("http://www.example.org")
+	item1, err1 := NewItemFromUrl("http://www.example.org")
+	item2, err2 := NewItemFromUrl("http://www.EXAMPLE.org#hello")
+	c.Check(err1, check.IsNil)
+	c.Check(err2, check.IsNil)
 
-	res := s.list.Has("http://www.EXAMPLE.org#hello")
+	s.list.Add(item1)
+
+	res := s.list.Has(item2)
 	c.Check(res, check.Equals, true)
 }
