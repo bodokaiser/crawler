@@ -1,78 +1,101 @@
 package pool
 
 import (
+	"sync"
 	"sync/atomic"
-	"time"
 )
 
-// Defines the amount of work to queue.
-var MaxQueue = 500
+// Type Work defines a job which should be executed in the work pool.
+type Work struct {
+	// Channel which indicates if work was done.
+	Done chan bool
+	// Function to execute in pool.
+	Func func(...interface{}) (interface{}, error)
+	// Error worker returned.
+	Error error
+	// Result worker returned.
+	Result interface{}
+	// Arguments to pass to worker function.
+	Params []interface{}
+}
 
-// Defines the amount of worker spawned by pool.
-var MaxWorker = 100
+// Defines maximum amount of parallel worker routines.
+var DefaultMaxWorker = 100
 
-// Defines the amount of time a worker is in idle.
-var MaxTimeout = time.Second
+// Type Config defines settings for a WorkPool.
+type Config struct {
+	// New can be used a work factory.
+	New func() *Work
+	// Defines custom amount of maximum parallel workers.
+	MaxWorker int
+}
 
-// Type Pool implements a worker pool which is generic to the work done.
-type Pool struct {
-	in      chan interface{}
-	out     chan interface{}
-	active  int32
+// Type Pool defines a facility to execute work in parallel.
+type WorkPool struct {
+	// Stores undone work.
+	work *sync.Pool
+	// Amount of max worker.
+	worker int
+	// Amount of active workers.
+	active int32
+	// Amount of pending work.
 	pending int32
-	worker  Worker
 }
 
-// Returns initialized worker pool with provided function as worker.
-func NewPool(w Worker) *Pool {
-	return &Pool{
-		in:     make(chan interface{}, MaxQueue),
-		out:    make(chan interface{}, MaxQueue),
-		worker: w,
-	}
-}
-
-// Returns an interface type value which was returned by a worker.
-// Blocks when values are pending.
-func (p *Pool) Get() interface{} {
-	if atomic.LoadInt32(&p.pending) > 0 {
-		atomic.AddInt32(&p.pending, -1)
-
-		return <-p.out
+// Returns initialized WorkPool with settings from Config.
+func NewWorkPool(c Config) *WorkPool {
+	p := &WorkPool{
+		work:   &sync.Pool{},
+		worker: DefaultMaxWorker,
 	}
 
-	return nil
+	if c.MaxWorker != 0 {
+		p.worker = c.MaxWorker
+	}
+	if c.New != nil {
+		p.work.New = func() interface{} {
+			return c.New()
+		}
+
+		p.Put(c.New())
+	}
+
+	return p
 }
 
-// Puts an interface type value into the pool which will be passed to a worker.
-// Blocks when all workers are busy until one is free again.
-func (p *Pool) Put(i interface{}) {
+// Puts work into the worker pool.
+// Will spawn more workers if capacity is open and go routines busy.
+func (p *WorkPool) Put(w *Work) {
 	atomic.AddInt32(&p.pending, 1)
 
 	pen := atomic.LoadInt32(&p.pending)
 	act := atomic.LoadInt32(&p.active)
 
-	if pen > act && act < int32(MaxWorker) {
-		go func(in <-chan interface{}, out chan<- interface{}, w Worker) {
+	if pen > act && act < int32(p.worker) {
+		go func(work *sync.Pool) {
 			for {
-				select {
-				case i := <-in:
-					out <- w(i)
-				case <-time.After(MaxTimeout):
+				w, ok := work.Get().(*Work)
+
+				if !ok || w == nil {
 					atomic.AddInt32(&p.active, -1)
 
 					return
 				}
+
+				w.Result, w.Error = w.Func(w.Params...)
+
+				if w.Done != nil {
+					w.Done <- true
+
+					close(w.Done)
+				}
+
+				atomic.AddInt32(&p.pending, -1)
 			}
-		}(p.in, p.out, p.worker)
+		}(p.work)
 
 		atomic.AddInt32(&p.active, 1)
 	}
 
-	p.in <- i
+	p.work.Put(w)
 }
-
-// The Worker type defins a function which receives a value put into the pool
-// which then may be processed concurrently to return another result which can
-// be received through get on the pool.
-type Worker func(interface{}) interface{}

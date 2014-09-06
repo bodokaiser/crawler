@@ -7,47 +7,56 @@ import (
 )
 
 func TestPool(t *testing.T) {
-	check.Suite(&PoolSuite{})
+	check.Suite(&PoolSuite{
+		conf: Config{},
+	})
 	check.TestingT(t)
 }
 
 type PoolSuite struct {
-	pool *Pool
+	conf  Config
+	work1 *Work
+	work2 *Work
+	pool  *WorkPool
 }
 
 func (s *PoolSuite) SetUpTest(c *check.C) {
-	s.pool = NewPool(worker)
-}
-
-func (s *PoolSuite) TestEmpty(c *check.C) {
-	res := s.pool.Get()
-
-	c.Check(res, check.IsNil)
+	s.pool = NewWorkPool(s.conf)
+	s.work1 = &Work{
+		Done:   make(chan bool),
+		Func:   work,
+		Params: []interface{}{1},
+	}
+	s.work2 = &Work{
+		Done:   make(chan bool),
+		Func:   work,
+		Params: []interface{}{1},
+	}
 }
 
 func (s *PoolSuite) TestSingle(c *check.C) {
-	s.pool.Put(2)
+	s.pool.Put(s.work1)
 
-	res := s.pool.Get()
-	c.Check(res, check.Equals, 4)
+	<-s.work1.Done
+
+	c.Check(s.work1.Result.(int), check.Equals, 3)
 }
 
 func (s *PoolSuite) TestMultiple(c *check.C) {
-	s.pool.Put(1)
-	s.pool.Put(2)
+	s.pool.Put(s.work1)
+	s.pool.Put(s.work2)
 
-	n := []int{
-		s.pool.Get().(int),
-		s.pool.Get().(int),
-	}
+	<-s.work1.Done
+	<-s.work2.Done
 
-	c.Check(n[0]+n[1], check.Equals, 7)
+	c.Check(s.work1.Result.(int), check.Equals, 3)
+	c.Check(s.work2.Result.(int), check.Equals, 3)
 }
 
-func worker(value interface{}) interface{} {
-	if n, ok := value.(int); ok {
-		return n + 2
+func work(params ...interface{}) (interface{}, error) {
+	if n, ok := params[0].(int); ok {
+		return n + 2, nil
 	}
 
-	return 0
+	return 0, nil
 }
