@@ -8,22 +8,21 @@ import (
 	. "github.com/bodokaiser/gerenuk"
 )
 
-var url string
+var conf = Config{}
 
 func main() {
-	flag.StringVar(&url, "url", "", "URL to crawl.")
+	flag.StringVar(&conf.DB, "db", "", "URL to mysql database.")
+	flag.StringVar(&conf.Url, "url", "", "URL to use as crawler entry.")
 	flag.Parse()
 
-	c := NewCrawler(url)
+	c, err := NewCrawler(conf)
+	if err != nil {
+		log.Fatalf("Error initializing crawler: %s.\n", err)
+
+		return
+	}
 
 	for {
-		url, err := c.Get()
-		if err != nil {
-			log.Fatalf("Error working: %s\n", err)
-
-			return
-		}
-
-		fmt.Printf("Visited: %s\n", url)
+		fmt.Printf("Visited: %s\n", c.Get())
 	}
 }

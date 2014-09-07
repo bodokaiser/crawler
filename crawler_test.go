@@ -56,7 +56,7 @@ func (s *CrawlerSuite) TestSingle(c *check.C) {
 }
 
 func (s *CrawlerSuite) TestMultiple(c *check.C) {
-	crawl := NewCrawler(s.multiple.URL)
+	crawler, err := NewCrawler()
 
 	url1, err1 := crawl.Get()
 	url2, err2 := crawl.Get()

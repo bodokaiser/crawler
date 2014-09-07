@@ -35,7 +35,7 @@ var sqlDropTables = `
 	DROP TABLE IF EXISTS ref, url;
 `
 
-func NewStore(url string) (*Store, error) {
+func Open(url string) (*Store, error) {
 	db, err := sql.Open("mysql", url)
 	if err != nil {
 		return nil, err

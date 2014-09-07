@@ -109,6 +109,10 @@ func (tx *Tx) AddRefer(r string) error {
 	return nil
 }
 
+func (tx *Tx) Abort() error {
+	return tx.tx.Rollback()
+}
+
 // Commits updated to database.
 func (tx *Tx) Commit() error {
 	tx.origin.Done = true
