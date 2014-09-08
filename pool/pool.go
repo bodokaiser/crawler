@@ -72,6 +72,7 @@ func (p *WorkerPool) SetNewFunc(fn func() *Work) {
 	p.work.New = func() interface{} {
 		return fn()
 	}
+	p.Put(fn())
 }
 
 // Sets maximum amount of parallel go routine workers.

@@ -11,29 +11,15 @@ import (
 	"github.com/bodokaiser/gerenuk/store"
 )
 
-type Config struct {
-	DB  string
-	Url string
-}
-
 type Crawler struct {
 	active bool
 	result chan string
+	pool   *pool.WorkerPool
 	store  *store.Store
-	pool   *pool.WorkPool
 }
 
-func NewCrawler(c Config) (*Crawler, error) {
-	s, err := store.Open(c.DB)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.DropTables()
-	if err != nil {
-		return nil, err
-	}
-	err = s.EnsureTables()
+func NewCrawler(db string) (*Crawler, error) {
+	s, err := store.Open(db)
 	if err != nil {
 		return nil, err
 	}
@@ -43,19 +29,18 @@ func NewCrawler(c Config) (*Crawler, error) {
 		result: make(chan string, 30),
 	}
 
-	return cr, cr.put(c.Url)
+	return cr, nil
 }
 
-func (c *Crawler) put(url string) error {
-	err := c.store.Insert(url)
+func (c *Crawler) Put(url string) error {
+	err := c.store.Put(url)
 	if err != nil {
 		return err
 	}
 
 	if c.active == false {
-		c.pool = pool.NewWorkPool(pool.Config{
-			New: c.work,
-		})
+		c.pool = pool.NewWorkerPool()
+		c.pool.SetNewFunc(c.work)
 
 		c.active = true
 	}
@@ -79,12 +64,12 @@ func (c *Crawler) work() *pool.Work {
 			res := params[0].(chan string)
 			store := params[1].(*store.Store)
 
-			tx, err := store.Begin()
+			p, err := store.Get()
 			if err != nil {
 				panic(err)
 			}
 
-			err = work(res, tx)
+			err = work(res, p)
 			if err != nil {
 				panic(err)
 			}
@@ -96,18 +81,18 @@ func (c *Crawler) work() *pool.Work {
 	}
 }
 
-func work(result chan<- string, tx *store.Tx) error {
-	fmt.Printf("request to: %s\n", tx.Origin())
-	req, err := http.NewRequest("GET", tx.Origin(), nil)
+func work(result chan<- string, p *store.Page) error {
+	fmt.Printf("request to: %s\n", p.Origin())
+	req, err := http.NewRequest("GET", p.Origin(), nil)
 	if err != nil {
-		tx.Abort()
+		p.Abort()
 
 		return err
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		tx.Abort()
+		p.Abort()
 
 		return err
 	}
@@ -128,13 +113,11 @@ func work(result chan<- string, tx *store.Tx) error {
 		case strings.HasPrefix(t, "http"):
 			result <- t
 
-			if err := tx.AddRefer(t); err != nil {
-				if err != store.ErrRefExists {
-					return err
-				}
+			if !p.HasRefer(t) {
+				p.AddRefer(t)
 			}
 		}
 	}
 
-	return tx.Commit()
+	return p.Commit()
 }
