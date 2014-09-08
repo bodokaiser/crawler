@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -11,110 +10,63 @@ import (
 
 func TestStore(t *testing.T) {
 	check.Suite(&StoreSuite{
-		url: "root@/gerenuk",
+		url:  "root@/gerenuk",
+		url1: "http://example.org",
+		url2: "http://company.com",
+		url3: "http://fooobar.net",
 	})
 	check.TestingT(t)
 }
 
 type StoreSuite struct {
 	url   string
-	db    *sql.DB
+	url1  string
+	url2  string
+	url3  string
 	store *Store
 }
 
-func (s *StoreSuite) SetUpSuite(c *check.C) {
-	db, err := sql.Open("mysql", s.url)
-	c.Assert(err, check.IsNil)
-
-	s.db = db
-	s.store = &Store{
-		db: db,
-	}
-}
-
 func (s *StoreSuite) SetUpTest(c *check.C) {
-	_, err := s.db.Exec(sqlCreateUrlTable)
+	store, err := Open(s.url)
+	c.Assert(err, check.IsNil)
+	c.Assert(store, check.NotNil)
+
+	err = store.Put(s.url1)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.db.Exec(sqlCreateRefTable)
-	c.Assert(err, check.IsNil)
-
-	_, err = s.db.Exec(sqlInsertUrl, "http://github.com/bodokaiser")
-	c.Assert(err, check.IsNil)
+	s.store = store
 }
 
-func (s *StoreSuite) TestEnsureTables(c *check.C) {
-	s.TearDownTest(c)
-
-	err := s.store.EnsureTables()
+func (s *StoreSuite) TestPut(c *check.C) {
+	err := s.store.Put(s.url2)
 	c.Assert(err, check.IsNil)
 
 	var n int
 
-	err = s.db.QueryRow(`
-		SELECT COUNT(*)
-		FROM information_schema.tables
-		WHERE table_schema = ?
-			AND (table_name = ? OR table_name = ?)
-	`, "gerenuk", "ref", "url").Scan(&n)
-
+	row := s.store.db.QueryRow(`SELECT COUNT(*) FROM url WHERE url = ?`, s.url2)
+	err = row.Scan(&n)
 	c.Assert(err, check.IsNil)
-	c.Check(n, check.Equals, 2)
+	c.Check(n, check.Equals, 1)
 }
 
-func (s *StoreSuite) TestDropTables(c *check.C) {
-	err := s.store.DropTables()
+func (s *StoreSuite) TestGet(c *check.C) {
+	p, err := s.store.Get()
 	c.Assert(err, check.IsNil)
 
-	var n int
+	c.Check(p.Origin(), check.Equals, s.url1)
+	c.Check(p.Refers(), check.HasLen, 0)
 
-	err = s.db.QueryRow(`
-		SELECT COUNT(*)
-		FROM information_schema.tables
-		WHERE table_schema = ?
-			AND (table_name = ? OR table_name = ?)
-	`, "gerenuk", "ref", "url").Scan(&n)
+	p.AddRefer(s.url2)
+	p.AddRefer(s.url3)
 
-	c.Assert(err, check.IsNil)
-	c.Check(n, check.Equals, 0)
-}
+	c.Check(p.HasRefer(s.url2), check.Equals, true)
+	c.Check(p.HasRefer(s.url3), check.Equals, true)
+	c.Check(p.Refers(), check.DeepEquals, []string{s.url2, s.url3})
 
-func (s *StoreSuite) TestInsert(c *check.C) {
-	err := s.store.Insert("http://www.satisfeet.me")
+	err = p.Commit()
 	c.Assert(err, check.IsNil)
 
-	var n int
-
-	err = s.db.QueryRow(`
-		SELECT COUNT(*)
-		FROM url
-		WHERE url = ?
-	`, "http://www.satisfeet.me").Scan(&n)
-	c.Assert(err, check.IsNil)
-}
-
-func (s *StoreSuite) TestBegin(c *check.C) {
-	tx, err := s.store.Begin()
-	c.Assert(err, check.IsNil)
-
-	origin := tx.Origin()
-	c.Check(origin, check.Equals, "http://github.com/bodokaiser")
-
-	err = tx.AddRefer("http://www.satisfeet.me")
-	c.Assert(err, check.IsNil)
-	err = tx.AddRefer("http://www.satisfeet.me/products")
-	c.Assert(err, check.IsNil)
-
-	refers := tx.Refers()
-	c.Check(refers, check.DeepEquals, []string{
-		"http://www.satisfeet.me",
-		"http://www.satisfeet.me/products",
-	})
-
-	err = tx.Commit()
-	c.Assert(err, check.IsNil)
-
-	rows, err := s.db.Query(`SELECT id, url, done FROM url`)
+	rows, err := s.store.db.Query(`SELECT id, url, done FROM url`)
 	c.Assert(err, check.IsNil)
 
 	var id int64
@@ -125,53 +77,53 @@ func (s *StoreSuite) TestBegin(c *check.C) {
 	err = rows.Scan(&id, &url, &done)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, int64(1))
-	c.Check(url, check.Equals, "http://github.com/bodokaiser")
+	c.Check(url, check.Equals, s.url1)
 	c.Check(done, check.Equals, true)
 
 	c.Assert(rows.Next(), check.Equals, true)
 	err = rows.Scan(&id, &url, &done)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, int64(2))
-	c.Check(url, check.Equals, "http://www.satisfeet.me")
+	c.Check(url, check.Equals, s.url2)
 	c.Check(done, check.Equals, false)
 
 	c.Assert(rows.Next(), check.Equals, true)
 	err = rows.Scan(&id, &url, &done)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, int64(3))
-	c.Check(url, check.Equals, "http://www.satisfeet.me/products")
+	c.Check(url, check.Equals, s.url3)
 	c.Check(done, check.Equals, false)
 
 	c.Assert(rows.Next(), check.Equals, false)
 	c.Assert(rows.Close(), check.IsNil)
 
-	var originId, referId int64
+	var oid, rid int64
 
-	rows, err = s.db.Query(`SELECT * FROM ref`)
+	rows, err = s.store.db.Query(`SELECT * FROM ref`)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(rows.Next(), check.Equals, true)
-	err = rows.Scan(&originId, &referId)
+	err = rows.Scan(&oid, &rid)
 	c.Assert(err, check.IsNil)
-	c.Check(originId, check.Equals, int64(1))
-	c.Check(referId, check.Equals, int64(2))
+	c.Check(oid, check.Equals, int64(1))
+	c.Check(rid, check.Equals, int64(2))
 
 	c.Assert(rows.Next(), check.Equals, true)
-	err = rows.Scan(&originId, &referId)
+	err = rows.Scan(&oid, &rid)
 	c.Assert(err, check.IsNil)
-	c.Check(originId, check.Equals, int64(1))
-	c.Check(referId, check.Equals, int64(3))
+	c.Check(oid, check.Equals, int64(1))
+	c.Check(rid, check.Equals, int64(3))
 
 	c.Assert(rows.Next(), check.Equals, false)
 	c.Assert(rows.Close(), check.IsNil)
 }
 
 func (s *StoreSuite) TearDownTest(c *check.C) {
-	_, err := s.db.Exec(sqlDropTables)
+	err := s.store.Reset()
 	c.Assert(err, check.IsNil)
 }
 
 func (s *StoreSuite) TearDownSuite(c *check.C) {
-	err := s.db.Close()
+	err := s.store.Close()
 	c.Assert(err, check.IsNil)
 }
