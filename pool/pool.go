@@ -5,67 +5,36 @@ import (
 	"sync/atomic"
 )
 
-// Type Work defines a job which should be executed in the work pool.
+// Default maximum amount of concurrent go routines.
+var DefaultMaxWorker = 100
+
+// Type Work defines a task to be executed in WorkerPool.
 type Work struct {
-	// Channel which indicates if work was done.
-	Done chan bool
-	// Function to execute in pool.
-	Func func(...interface{}) (interface{}, error)
-	// Error worker returned.
-	Error error
-	// Result worker returned.
+	Func   func(...interface{}) (interface{}, error)
+	Done   chan bool
+	Error  error
 	Result interface{}
-	// Arguments to pass to worker function.
 	Params []interface{}
 }
 
-// Defines maximum amount of parallel worker routines.
-var DefaultMaxWorker = 100
-
-// Type Config defines settings for a WorkPool.
-type Config struct {
-	// New can be used a work factory.
-	New func() *Work
-	// Defines custom amount of maximum parallel workers.
-	MaxWorker int
-}
-
-// Type Pool defines a facility to execute work in parallel.
-type WorkPool struct {
-	// Stores undone work.
-	work *sync.Pool
-	// Amount of max worker.
-	worker int
-	// Amount of active workers.
-	active int32
-	// Amount of pending work.
+// Type WorkerPool allows concurrent execution of tasks.
+type WorkerPool struct {
+	work    *sync.Pool
+	worker  int
+	active  int32
 	pending int32
 }
 
-// Returns initialized WorkPool with settings from Config.
-func NewWorkPool(c Config) *WorkPool {
-	p := &WorkPool{
+// Returns new initialized worker pool.
+func NewWorkerPool() *WorkerPool {
+	return &WorkerPool{
 		work:   &sync.Pool{},
 		worker: DefaultMaxWorker,
 	}
-
-	if c.MaxWorker != 0 {
-		p.worker = c.MaxWorker
-	}
-	if c.New != nil {
-		p.work.New = func() interface{} {
-			return c.New()
-		}
-
-		p.Put(c.New())
-	}
-
-	return p
 }
 
-// Puts work into the worker pool.
-// Will spawn more workers if capacity is open and go routines busy.
-func (p *WorkPool) Put(w *Work) {
+// Puts work into worker pool and spawns worker if capacity is not full.
+func (p *WorkerPool) Put(w *Work) {
 	atomic.AddInt32(&p.pending, 1)
 
 	pen := atomic.LoadInt32(&p.pending)
@@ -86,8 +55,6 @@ func (p *WorkPool) Put(w *Work) {
 
 				if w.Done != nil {
 					w.Done <- true
-
-					close(w.Done)
 				}
 
 				atomic.AddInt32(&p.pending, -1)
@@ -98,4 +65,18 @@ func (p *WorkPool) Put(w *Work) {
 	}
 
 	p.work.Put(w)
+}
+
+// Sets function to automatically generate new work.
+func (p *WorkerPool) SetNewFunc(fn func() *Work) {
+	p.work.New = func() interface{} {
+		return fn()
+	}
+}
+
+// Sets maximum amount of parallel go routine workers.
+func (p *WorkerPool) SetMaxWorker(n int) {
+	if n > 0 {
+		p.worker = n
+	}
 }

@@ -7,21 +7,18 @@ import (
 )
 
 func TestPool(t *testing.T) {
-	check.Suite(&PoolSuite{
-		conf: Config{},
-	})
+	check.Suite(&PoolSuite{})
 	check.TestingT(t)
 }
 
 type PoolSuite struct {
-	conf  Config
+	pool  *WorkerPool
 	work1 *Work
 	work2 *Work
-	pool  *WorkPool
 }
 
 func (s *PoolSuite) SetUpTest(c *check.C) {
-	s.pool = NewWorkPool(s.conf)
+	s.pool = NewWorkerPool()
 	s.work1 = &Work{
 		Done:   make(chan bool),
 		Func:   work,
