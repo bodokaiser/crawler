@@ -12,13 +12,13 @@ func TestPool(t *testing.T) {
 }
 
 type PoolSuite struct {
-	pool  *WorkerPool
+	wpool *WorkerPool
 	work1 *Work
 	work2 *Work
 }
 
 func (s *PoolSuite) SetUpTest(c *check.C) {
-	s.pool = NewWorkerPool()
+	s.wpool = NewWorkerPool()
 	s.work1 = &Work{
 		Done:   make(chan bool),
 		Func:   work,
@@ -32,7 +32,7 @@ func (s *PoolSuite) SetUpTest(c *check.C) {
 }
 
 func (s *PoolSuite) TestSingle(c *check.C) {
-	s.pool.Put(s.work1)
+	s.wpool.Put(s.work1)
 
 	<-s.work1.Done
 
@@ -40,8 +40,8 @@ func (s *PoolSuite) TestSingle(c *check.C) {
 }
 
 func (s *PoolSuite) TestMultiple(c *check.C) {
-	s.pool.Put(s.work1)
-	s.pool.Put(s.work2)
+	s.wpool.Put(s.work1)
+	s.wpool.Put(s.work2)
 
 	<-s.work1.Done
 	<-s.work2.Done

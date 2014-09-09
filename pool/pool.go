@@ -1,14 +1,16 @@
 package pool
 
 import (
-	"sync"
 	"sync/atomic"
+	"time"
 )
 
-// Default maximum amount of concurrent go routines.
-var DefaultMaxWorker = 100
+var (
+	DefaultTimeout   = time.Second
+	DefaultMaxQueue  = 100
+	DefaultMaxWorker = 200
+)
 
-// Type Work defines a task to be executed in WorkerPool.
 type Work struct {
 	Func   func(...interface{}) (interface{}, error)
 	Done   chan bool
@@ -17,23 +19,23 @@ type Work struct {
 	Params []interface{}
 }
 
-// Type WorkerPool allows concurrent execution of tasks.
 type WorkerPool struct {
-	work    *sync.Pool
+	queue   chan *Work
 	worker  int
 	active  int32
 	pending int32
+	timeout time.Duration
 }
 
-// Returns new initialized worker pool.
 func NewWorkerPool() *WorkerPool {
-	return &WorkerPool{
-		work:   &sync.Pool{},
-		worker: DefaultMaxWorker,
-	}
+	p := &WorkerPool{}
+	p.SetTimeout(DefaultTimeout)
+	p.SetMaxQueue(DefaultMaxQueue)
+	p.SetMaxWorker(DefaultMaxWorker)
+
+	return p
 }
 
-// Puts work into worker pool and spawns worker if capacity is not full.
 func (p *WorkerPool) Put(w *Work) {
 	atomic.AddInt32(&p.pending, 1)
 
@@ -41,43 +43,39 @@ func (p *WorkerPool) Put(w *Work) {
 	act := atomic.LoadInt32(&p.active)
 
 	if pen > act && act < int32(p.worker) {
-		go func(work *sync.Pool) {
+		go func(queue <-chan *Work, timeout time.Duration) {
 			for {
-				w, ok := work.Get().(*Work)
+				select {
+				case w := <-queue:
+					w.Result, w.Error = w.Func(w.Params...)
 
-				if !ok || w == nil {
+					if w.Done != nil {
+						w.Done <- true
+					}
+
+					atomic.AddInt32(&p.pending, -1)
+				case <-time.After(timeout):
 					atomic.AddInt32(&p.active, -1)
 
 					return
 				}
-
-				w.Result, w.Error = w.Func(w.Params...)
-
-				if w.Done != nil {
-					w.Done <- true
-				}
-
-				atomic.AddInt32(&p.pending, -1)
 			}
-		}(p.work)
+		}(p.queue, p.timeout)
 
 		atomic.AddInt32(&p.active, 1)
 	}
 
-	p.work.Put(w)
+	p.queue <- w
 }
 
-// Sets function to automatically generate new work.
-func (p *WorkerPool) SetNewFunc(fn func() *Work) {
-	p.work.New = func() interface{} {
-		return fn()
-	}
-	p.Put(fn())
+func (p *WorkerPool) SetTimeout(d time.Duration) {
+	p.timeout = d
 }
 
-// Sets maximum amount of parallel go routine workers.
+func (p *WorkerPool) SetMaxQueue(n int) {
+	p.queue = make(chan *Work, n)
+}
+
 func (p *WorkerPool) SetMaxWorker(n int) {
-	if n > 0 {
-		p.worker = n
-	}
+	p.worker = n
 }
