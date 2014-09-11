@@ -49,6 +49,7 @@ func (s *QueueSuite) TestPush(c *check.C) {
 		}(s.queue, &wg)
 	}
 	wg.Wait()
+
 	c.Check(s.queue.length, check.Equals, len(s.queue.queue))
 	c.Check(s.queue.length, check.Equals, 100*10000+4)
 }

@@ -1,9 +1,6 @@
 package pipeline
 
-import (
-	"fmt"
-	"sync"
-)
+import "sync"
 
 type Stage interface {
 	Process(<-chan Event) <-chan Event
@@ -23,8 +20,8 @@ func fanIn(in <-chan Event, out *[]chan Event, mut *sync.Mutex) {
 		}
 		mut.Unlock()
 	}
+
 	for _, out := range *out {
-		fmt.Printf("closing %v\n", out)
 		mut.Lock()
 		close(out)
 		mut.Unlock()

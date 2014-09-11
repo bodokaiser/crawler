@@ -20,6 +20,7 @@ func NewPipeline() *Pipeline {
 		output: new([]chan Event),
 	}
 	go fanIn(pl.input, pl.output, pl.mutex)
+
 	return pl
 }
 
@@ -41,6 +42,7 @@ func (p *Pipeline) Pipe(s Stage) *Pipeline {
 	}
 	p.push(pl.input)
 	go fanIn(s.Process(pl.input), pl.output, pl.mutex)
+
 	return pl
 }
 
@@ -51,5 +53,6 @@ func (p *Pipeline) Close() {
 func (p *Pipeline) Listen() <-chan Event {
 	out := make(chan Event)
 	p.push(out)
+
 	return out
 }

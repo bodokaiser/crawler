@@ -21,11 +21,13 @@ func (q *Queue) Pull() interface{} {
 	if q.length == 0 {
 		return nil
 	}
+
 	q.mutex.Lock()
 	x := q.queue[0]
 	q.queue = q.queue[1:]
 	q.length--
 	q.mutex.Unlock()
+
 	return x
 }
 

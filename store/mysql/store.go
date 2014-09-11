@@ -15,7 +15,11 @@ type Driver struct{}
 
 func (d *Driver) Open(url string) (store.Store, error) {
 	db, err := sql.Open("mysql", url)
-	return &Store{db: db}, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &Store{db: db}, nil
 }
 
 type Store struct {
@@ -24,6 +28,7 @@ type Store struct {
 
 func (s *Store) Page() (store.PageStore, error) {
 	p := &PageStore{db: s.db}
+
 	return p, p.create()
 }
 
