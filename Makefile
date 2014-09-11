@@ -11,6 +11,7 @@ test-text:
 
 cmd-cli:
 	@go run ./cmd/cli/main.go \
+		--db root@/gerenuk \
 		--url http://www.satisfeet.me
 
 cmd-http:
