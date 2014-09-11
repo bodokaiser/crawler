@@ -68,18 +68,18 @@ func (s *PageStore) create() error {
 	return err
 }
 
-func (s *PageStore) Insert(p *store.Page) error {
+func (s *PageStore) Insert(p store.Page) error {
 	tx, err := newPageTx(s.db)
 	if err != nil {
 		return err
 	}
 
-	oid, err := tx.InsertUrl(p.Origin)
+	oid, err := tx.InsertUrl(p.Origin())
 	if err != nil {
 		return err
 	}
 
-	for _, ref := range p.Refers {
+	for _, ref := range p.Refers() {
 		rid, err := tx.InsertUrl(ref)
 		if err != nil {
 			return err

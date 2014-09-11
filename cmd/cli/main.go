@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	. "github.com/bodokaiser/gerenuk"
-	"github.com/bodokaiser/gerenuk/store"
 	_ "github.com/bodokaiser/gerenuk/store/mysql"
 )
 
@@ -25,18 +24,18 @@ func main() {
 		return
 	}
 
+	p := Page{}
+	p.SetOrigin(url)
+
 	c, err := NewCrawler(conf)
 	if err != nil {
 		log.Fatalf("Error initializing crawler: %s.\n", err)
 		return
 	}
-	c.Put(store.Page{
-		Origin: url,
-		Refers: make([]string, 0),
-	})
+	c.Put(p)
 
 	for r := range c.Results() {
-		fmt.Printf("%s: %s\n", r.Origin, strings.Join(r.Refers, ", "))
+		fmt.Printf("%s: %s\n", r.Origin(), strings.Join(r.Refers(), ", "))
 
 		c.Put(r)
 	}

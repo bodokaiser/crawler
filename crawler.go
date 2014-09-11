@@ -38,13 +38,13 @@ func NewCrawler(c Config) (*Crawler, error) {
 
 		go func(out chan<- pipeline.Event) {
 			for e := range in {
-				p := e.Result.(store.Page)
+				p := e.Result.(Page)
 
-				for _, r := range p.Refers {
+				for _, r := range p.Refers() {
 					ch <- pipeline.Event{
-						Result: store.Page{
-							Origin: r,
-							Refers: make([]string, 0),
+						Result: Page{
+							origin: r,
+							refers: make([]string, 0),
 						},
 					}
 				}
@@ -63,7 +63,7 @@ func NewCrawler(c Config) (*Crawler, error) {
 	}, nil
 }
 
-func (c *Crawler) Put(p store.Page) {
+func (c *Crawler) Put(p Page) {
 	c.queue.Push(p)
 
 	if !c.active {
@@ -71,12 +71,12 @@ func (c *Crawler) Put(p store.Page) {
 	}
 }
 
-func (c *Crawler) Results() <-chan store.Page {
-	ch := make(chan store.Page)
+func (c *Crawler) Results() <-chan Page {
+	ch := make(chan Page)
 
 	go func() {
 		for e := range c.result.Listen() {
-			ch <- e.Result.(store.Page)
+			ch <- e.Result.(Page)
 		}
 		close(ch)
 	}()
@@ -89,7 +89,7 @@ func (c *Crawler) poll() {
 		x := c.queue.Pull()
 
 		if x != nil {
-			p := x.(store.Page)
+			p := x.(Page)
 
 			w := &worker.Work{
 				Func:   crawl,
@@ -101,7 +101,7 @@ func (c *Crawler) poll() {
 
 				if w.Error == nil {
 					pipe.Emit(pipeline.Event{
-						Result: w.Result.(store.Page),
+						Result: w.Result.(Page),
 					})
 				}
 			}(w, c.entry)
@@ -112,9 +112,9 @@ func (c *Crawler) poll() {
 }
 
 func crawl(params ...interface{}) (interface{}, error) {
-	p := params[0].(store.Page)
+	p := params[0].(Page)
 
-	req, err := http.NewRequest("GET", p.Origin, nil)
+	req, err := http.NewRequest("GET", p.Origin(), nil)
 	if err != nil {
 		return nil, err
 	}
