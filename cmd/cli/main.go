@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -10,26 +9,24 @@ import (
 	_ "github.com/bodokaiser/gerenuk/store/mysql"
 )
 
-var url string
-
-var conf Config
+var conf = &Config{}
 
 func main() {
-	flag.StringVar(&url, "url", "", "url to crawl")
-	flag.StringVar(&conf.DB, "db", "", "url to database")
-	flag.Parse()
+	conf.Parse()
 
-	if len(url) == 0 {
-		log.Fatalf("Please provide an url parameter.\n")
+	if err := conf.Check(); err != nil {
+		log.Fatalf("Error parsing parameters: %s.\n", err)
+
 		return
 	}
 
 	p := Page{}
-	p.SetOrigin(url)
+	p.SetOrigin(conf.Origin)
 
 	c, err := NewCrawler(conf)
 	if err != nil {
 		log.Fatalf("Error initializing crawler: %s.\n", err)
+
 		return
 	}
 	c.Put(p)

@@ -12,10 +12,6 @@ import (
 	"github.com/bodokaiser/gerenuk/worker"
 )
 
-type Config struct {
-	DB string
-}
-
 type Crawler struct {
 	active bool
 	store  store.Store
@@ -25,8 +21,8 @@ type Crawler struct {
 	result *pipeline.Pipeline
 }
 
-func NewCrawler(c Config) (*Crawler, error) {
-	s, err := store.Open("mysql", c.DB)
+func NewCrawler(c *Config) (*Crawler, error) {
+	s, err := store.Open("mysql", c.Store.Url)
 	if err != nil {
 		return nil, err
 	}
