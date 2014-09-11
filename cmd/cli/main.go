@@ -3,19 +3,34 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	. "github.com/bodokaiser/gerenuk"
+	"github.com/bodokaiser/gerenuk/pipe"
+	"github.com/bodokaiser/gerenuk/store"
 	_ "github.com/bodokaiser/gerenuk/store/mysql"
 )
 
 var conf = &Config{}
 
+var pages store.PageStore
+
 func main() {
 	conf.Parse()
-
 	if err := conf.Check(); err != nil {
 		log.Fatalf("Error parsing parameters: %s.\n", err)
+
+		return
+	}
+
+	s, err := store.Open("mysql", conf.Store.Url)
+	if err != nil {
+		log.Fatalf("Error connecting to store: %s.\n", err)
+
+		return
+	}
+	pages, err = s.Page()
+	if err != nil {
+		log.Fatalf("Error setting up store: %s.\n", err)
 
 		return
 	}
@@ -23,17 +38,42 @@ func main() {
 	p := Page{}
 	p.SetOrigin(conf.Origin)
 
-	c, err := NewCrawler(conf)
-	if err != nil {
-		log.Fatalf("Error initializing crawler: %s.\n", err)
-
-		return
-	}
+	c := NewCrawler()
 	c.Put(p)
 
-	for r := range c.Results() {
-		fmt.Printf("%s: %s\n", r.Origin(), strings.Join(r.Refers(), ", "))
+	for e := range c.Pipe.Pipe(pipe.StageFunc(insert)).Listen() {
+		p := e.(Page)
 
-		c.Put(r)
+		//fmt.Printf("%s: %s\n", p.Origin(), strings.Join(p.Refers(), ", "))
+
+		for _, r := range p.Refers() {
+			p := Page{}
+			p.SetOrigin(r)
+
+			c.Put(p)
+		}
 	}
+}
+
+func insert(in <-chan pipe.Event) <-chan pipe.Event {
+	out := make(chan pipe.Event)
+
+	go func(in <-chan pipe.Event, out chan<- pipe.Event) {
+		for e := range in {
+			p := e.(Page)
+
+			fmt.Printf("pre\n")
+			if err := pages.Insert(&p); err != nil {
+				log.Fatalf("Error inserting page: %s.\n", err)
+
+				break
+			} else {
+				out <- p
+			}
+			fmt.Printf("post\n")
+		}
+		close(out)
+	}(in, out)
+
+	return out
 }
