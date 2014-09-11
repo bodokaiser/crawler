@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bodokaiser/gerenuk/parser/html"
+	"github.com/bodokaiser/gerenuk/html"
 	"github.com/bodokaiser/gerenuk/pipeline"
 	"github.com/bodokaiser/gerenuk/queue"
 	"github.com/bodokaiser/gerenuk/store"
