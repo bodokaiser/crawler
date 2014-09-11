@@ -19,7 +19,7 @@ type Work struct {
 	Params []interface{}
 }
 
-type WorkerPool struct {
+type Pool struct {
 	queue   chan *Work
 	worker  int
 	active  int32
@@ -27,8 +27,8 @@ type WorkerPool struct {
 	timeout time.Duration
 }
 
-func NewWorkerPool() *WorkerPool {
-	p := &WorkerPool{}
+func NewPool() *Pool {
+	p := &Pool{}
 	p.SetTimeout(DefaultTimeout)
 	p.SetMaxQueue(DefaultMaxQueue)
 	p.SetMaxWorker(DefaultMaxWorker)
@@ -36,7 +36,7 @@ func NewWorkerPool() *WorkerPool {
 	return p
 }
 
-func (p *WorkerPool) Put(w *Work) {
+func (p *Pool) Put(w *Work) {
 	atomic.AddInt32(&p.pending, 1)
 	pen := atomic.LoadInt32(&p.pending)
 	act := atomic.LoadInt32(&p.active)
@@ -68,14 +68,14 @@ func (p *WorkerPool) Put(w *Work) {
 	p.queue <- w
 }
 
-func (p *WorkerPool) SetTimeout(d time.Duration) {
+func (p *Pool) SetTimeout(d time.Duration) {
 	p.timeout = d
 }
 
-func (p *WorkerPool) SetMaxQueue(n int) {
+func (p *Pool) SetMaxQueue(n int) {
 	p.queue = make(chan *Work, n)
 }
 
-func (p *WorkerPool) SetMaxWorker(n int) {
+func (p *Pool) SetMaxWorker(n int) {
 	p.worker = n
 }

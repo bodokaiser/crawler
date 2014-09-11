@@ -20,7 +20,7 @@ type Crawler struct {
 	active bool
 	store  store.Store
 	queue  *queue.Queue
-	worker *worker.WorkerPool
+	worker *worker.Pool
 	entry  *pipeline.Pipeline
 	result *pipeline.Pipeline
 }
@@ -57,7 +57,7 @@ func NewCrawler(c Config) (*Crawler, error) {
 	return &Crawler{
 		store:  s,
 		queue:  q,
-		worker: worker.NewWorkerPool(),
+		worker: worker.NewPool(),
 		entry:  ep,
 		result: rp,
 	}, nil

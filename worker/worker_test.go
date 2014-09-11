@@ -12,13 +12,13 @@ func TestWorker(t *testing.T) {
 }
 
 type WorkerSuite struct {
-	wpool *WorkerPool
+	pool  *Pool
 	work1 *Work
 	work2 *Work
 }
 
 func (s *WorkerSuite) SetUpTest(c *check.C) {
-	s.wpool = NewWorkerPool()
+	s.pool = NewPool()
 	s.work1 = &Work{
 		Done:   make(chan bool),
 		Func:   work,
@@ -32,7 +32,7 @@ func (s *WorkerSuite) SetUpTest(c *check.C) {
 }
 
 func (s *WorkerSuite) TestSingle(c *check.C) {
-	s.wpool.Put(s.work1)
+	s.pool.Put(s.work1)
 
 	<-s.work1.Done
 
@@ -40,8 +40,8 @@ func (s *WorkerSuite) TestSingle(c *check.C) {
 }
 
 func (s *WorkerSuite) TestMultiple(c *check.C) {
-	s.wpool.Put(s.work1)
-	s.wpool.Put(s.work2)
+	s.pool.Put(s.work1)
+	s.pool.Put(s.work2)
 
 	<-s.work1.Done
 	<-s.work2.Done
