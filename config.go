@@ -6,21 +6,19 @@ import (
 )
 
 type Config struct {
-	Store struct {
-		Url string
-	}
-	Origin string
+	Entry string
 }
 
-func (c *Config) Parse() {
-	flag.StringVar(&c.Origin, "url", "", "origin url")
-	flag.StringVar(&c.Store.Url, "db", "", "database url")
+func (c *Config) Parse() error {
+	flag.StringVar(&c.Entry, "entry", "", "entry url")
 	flag.Parse()
+
+	return c.Check()
 }
 
 func (c *Config) Check() error {
-	if c.Store.Url == "" {
-		return errors.New("invalid database url")
+	if c.Entry == "" {
+		return errors.New("invalid entry url")
 	}
 
 	return nil

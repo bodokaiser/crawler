@@ -9,9 +9,7 @@ import (
 
 func main() {
 	conf := &crawler.Config{}
-	conf.Parse()
-
-	if err := conf.Check(); err != nil {
+	if err := conf.Parse(); err != nil {
 		log.Fatalf("Error parsing parameters: %s.\n", err)
 
 		return
@@ -19,7 +17,7 @@ func main() {
 
 	c := crawler.New()
 	c.Put(&crawler.Page{
-		Origin: conf.Origin,
+		Origin: conf.Entry,
 	})
 
 	for {
