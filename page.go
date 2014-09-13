@@ -6,37 +6,22 @@ import (
 )
 
 type Page struct {
-	origin string
-	refers []string
-}
-
-func NewPage(urlStr string) *Page {
-	return &Page{
-		origin: urlStr,
-		refers: make([]string, 0),
-	}
-}
-
-func (p *Page) Origin() string {
-	return p.origin
+	Origin string
+	Refers []string
 }
 
 func (p *Page) SetOrigin(url string) {
 	url = normalize(url).String()
 
 	if len(url) > 0 {
-		p.origin = url
+		p.Origin = url
 	}
-}
-
-func (p *Page) Refers() []string {
-	return p.refers
 }
 
 func (p *Page) HasRefer(url string) bool {
 	url = normalize(url).String()
 
-	for _, ref := range p.refers {
+	for _, ref := range p.Refers {
 		if ref == url {
 			return true
 		}
@@ -48,13 +33,13 @@ func (p *Page) HasRefer(url string) bool {
 func (p *Page) AddRefer(url string) {
 	switch {
 	case strings.HasPrefix(url, "/"):
-		o := normalize(p.origin)
+		o := normalize(p.Origin)
 		o.Path = url
 		url = o.String()
 
 		fallthrough
 	case strings.HasPrefix(url, "http"):
-		p.refers = append(p.refers, url)
+		p.Refers = append(p.Refers, url)
 	}
 }
 

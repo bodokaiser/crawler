@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/bodokaiser/crawler"
-	_ "github.com/bodokaiser/crawler/store/mysql"
 )
 
 func main() {
@@ -19,17 +18,21 @@ func main() {
 	}
 
 	c := crawler.New()
-	c.Put(crawler.NewPage(conf.Origin))
+	c.Put(&crawler.Page{
+		Origin: conf.Origin,
+	})
 
 	for {
 		p := c.Get()
 
-		fmt.Printf("Origin: %s\n", p.Origin())
+		fmt.Printf("Origin: %s\n", p.Origin)
 
-		for _, r := range p.Refers() {
+		for _, r := range p.Refers {
 			fmt.Printf("Refer: %s\n", r)
 
-			c.Put(crawler.NewPage(r))
+			c.Put(&crawler.Page{
+				Origin: conf.Origin,
+			})
 		}
 	}
 }

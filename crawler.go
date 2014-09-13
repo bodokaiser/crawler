@@ -42,7 +42,7 @@ type crawl struct {
 }
 
 func (c *crawl) Do() {
-	res, err := http.Get(c.Page.Origin())
+	res, err := http.Get(c.Page.Origin)
 	if err != nil {
 		return
 	}
