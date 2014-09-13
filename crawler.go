@@ -27,16 +27,8 @@ func (c *Crawler) Put(p *Page) {
 		return
 	}
 
-	w := &crawl{p, make(chan bool)}
-
-	go func(in <-chan bool, out chan<- *Page, p *Page) {
-		<-in
-
-		out <- p
-	}(w.Done, c.result, w.Page)
-
 	c.pages.Add(p)
-	c.worker.Add(w)
+	c.worker.Add(&crawl{p, c.result})
 }
 
 func (c *Crawler) Get() *Page {
@@ -44,8 +36,8 @@ func (c *Crawler) Get() *Page {
 }
 
 type crawl struct {
-	Page *Page
-	Done chan bool
+	Page   *Page
+	Result chan *Page
 }
 
 func (c *crawl) Do() {
@@ -66,5 +58,5 @@ func (c *crawl) Do() {
 		}
 	}
 
-	close(c.Done)
+	c.Result <- c.Page
 }

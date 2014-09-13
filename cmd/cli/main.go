@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/bodokaiser/crawler"
 )
+
+var wg = new(sync.WaitGroup)
 
 func main() {
 	conf := &crawler.Config{}
@@ -20,6 +23,16 @@ func main() {
 		Origin: conf.Entry,
 	})
 
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+
+		go crawl(c)
+	}
+
+	wg.Wait()
+}
+
+func crawl(c *crawler.Crawler) {
 	for {
 		p := c.Get()
 
@@ -32,4 +45,6 @@ func main() {
 			c.Put(p)
 		}
 	}
+
+	wg.Done()
 }
