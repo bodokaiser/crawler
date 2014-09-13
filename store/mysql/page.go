@@ -3,7 +3,7 @@ package mysql
 import (
 	"database/sql"
 
-	"github.com/bodokaiser/gerenuk/store"
+	"github.com/bodokaiser/crawler/store"
 )
 
 const (
@@ -64,28 +64,33 @@ func (s *PageStore) create() error {
 		return err
 	}
 	_, err = s.db.Exec(sqlCreateTableRef)
+
 	return err
 }
 
-func (s *PageStore) Insert(p *store.Page) error {
+func (s *PageStore) Insert(p store.Page) error {
 	tx, err := newPageTx(s.db)
 	if err != nil {
 		return err
 	}
-	oid, err := tx.InsertUrl(p.Origin)
+
+	oid, err := tx.InsertUrl(p.Origin())
 	if err != nil {
 		return err
 	}
-	for _, ref := range p.Refers {
+
+	for _, ref := range p.Refers() {
 		rid, err := tx.InsertUrl(ref)
 		if err != nil {
 			return err
 		}
+
 		err = tx.InsertRef(oid, rid)
 		if err != nil {
 			return err
 		}
 	}
+
 	return tx.tx.Commit()
 }
 
@@ -94,6 +99,7 @@ func (s *PageStore) Reset() error {
 	if err != nil {
 		return err
 	}
+
 	return s.create()
 }
 
@@ -108,11 +114,13 @@ func newPageTx(db *sql.DB) (*pageTx, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	url, err := tx.Prepare(sqlInsertUrl)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
+
 	ref, err := tx.Prepare(sqlInsertRef)
 	if err != nil {
 		tx.Rollback()
@@ -132,24 +140,29 @@ func (tx *pageTx) InsertUrl(url string) (int64, error) {
 		tx.tx.Rollback()
 		return 0, err
 	}
+
 	id, err := res.LastInsertId()
 	if err != nil {
 		tx.tx.Rollback()
 		return id, err
 	}
+
 	rows, err := res.RowsAffected()
 	if err != nil {
 		tx.tx.Rollback()
 		return 0, err
 	}
+
 	if rows == 0 {
 		tx.tx.Rollback()
 		return 0, store.ErrDupRow
 	}
+
 	return id, nil
 }
 
 func (tx *pageTx) InsertRef(oid, rid int64) error {
 	_, err := tx.ref.Exec(oid, rid)
+
 	return err
 }

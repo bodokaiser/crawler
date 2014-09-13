@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/bodokaiser/gerenuk/store"
+	"github.com/bodokaiser/crawler/store"
 )
 
 func TestPage(t *testing.T) {
@@ -40,9 +40,9 @@ func (s *PageSuite) SetUpTest(c *check.C) {
 }
 
 func (s *PageSuite) TestInsert(c *check.C) {
-	p := store.Page{
-		Origin: "http://example.org",
-		Refers: []string{
+	p := page{
+		origin: "http://example.org",
+		refers: []string{
 			"http://example1.org",
 			"http://example2.org",
 		},
@@ -54,8 +54,8 @@ func (s *PageSuite) TestInsert(c *check.C) {
 	var origin, refers string
 	err = s.db.QueryRow(sqlSelect).Scan(&origin, &refers)
 	c.Assert(err, check.IsNil)
-	c.Check(origin, check.Equals, p.Origin)
-	c.Check(refers, check.Equals, strings.Join(p.Refers, ","))
+	c.Check(origin, check.Equals, p.Origin())
+	c.Check(refers, check.Equals, strings.Join(p.Refers(), ","))
 
 	err = s.store.Insert(&p)
 	c.Assert(err, check.Equals, store.ErrDupRow)
@@ -81,4 +81,17 @@ func (s *PageSuite) TearDownTest(c *check.C) {
 
 func (s *PageSuite) TearDownSuite(c *check.C) {
 	s.db.Close()
+}
+
+type page struct {
+	origin string
+	refers []string
+}
+
+func (p page) Origin() string {
+	return p.origin
+}
+
+func (p page) Refers() []string {
+	return p.refers
 }

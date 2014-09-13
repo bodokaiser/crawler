@@ -13,6 +13,15 @@ type Driver interface {
 	Open(string) (Store, error)
 }
 
+type Page interface {
+	Origin() string
+	Refers() []string
+}
+
+type PageStore interface {
+	Insert(Page) error
+}
+
 var ErrDupRow = errors.New("duplicate row")
 
 func Open(name, url string) (Store, error) {
