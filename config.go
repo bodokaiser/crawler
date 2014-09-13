@@ -1,4 +1,4 @@
-package gerenuk
+package crawler
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package gerenuk
+package crawler
 
 import (
 	"net/url"
@@ -10,12 +10,19 @@ type Page struct {
 	refers []string
 }
 
+func NewPage(urlStr string) *Page {
+	return &Page{
+		origin: urlStr,
+		refers: make([]string, 0),
+	}
+}
+
 func (p *Page) Origin() string {
 	return p.origin
 }
 
 func (p *Page) SetOrigin(url string) {
-	url = normalize(url)
+	url = normalize(url).String()
 
 	if len(url) > 0 {
 		p.origin = url
@@ -27,7 +34,7 @@ func (p *Page) Refers() []string {
 }
 
 func (p *Page) HasRefer(url string) bool {
-	url = normalize(url)
+	url = normalize(url).String()
 
 	for _, ref := range p.refers {
 		if ref == url {
@@ -39,23 +46,27 @@ func (p *Page) HasRefer(url string) bool {
 }
 
 func (p *Page) AddRefer(url string) {
-	if p.refers == nil {
-		p.refers = make([]string, 0)
-	}
-	if url := normalize(url); len(url) > 0 {
+	switch {
+	case strings.HasPrefix(url, "/"):
+		o := normalize(p.origin)
+		o.Path = url
+		url = o.String()
+
+		fallthrough
+	case strings.HasPrefix(url, "http"):
 		p.refers = append(p.refers, url)
 	}
 }
 
-func normalize(urlStr string) string {
+func normalize(urlStr string) *url.URL {
 	uri, err := url.Parse(urlStr)
 	if err != nil {
-		return ""
+		return nil
 	}
 
 	uri.Host = strings.ToLower(uri.Host)
 	uri.Scheme = strings.ToLower(uri.Scheme)
 	uri.Fragment = ""
 
-	return uri.String()
+	return uri
 }

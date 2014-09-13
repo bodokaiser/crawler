@@ -1,56 +1,48 @@
-package gerenuk
+package crawler
 
 import (
 	"bufio"
 	"net/http"
-	"strings"
 
-	"github.com/bodokaiser/gerenuk/pipe"
-	"github.com/bodokaiser/gerenuk/scan/html"
-	"github.com/bodokaiser/gerenuk/work"
+	"github.com/bodokaiser/crawler/scan/html"
+	"github.com/bodokaiser/crawler/work"
 )
 
 type Crawler struct {
-	Worker *work.Worker
-	Pipe   *pipe.Pipeline
+	result chan *Page
+	worker *work.Worker
 }
 
-func NewCrawler() *Crawler {
+func New() *Crawler {
 	return &Crawler{
-		Worker: work.NewWorker(),
-		Pipe:   pipe.NewPipeline(),
+		result: make(chan *Page),
+		worker: work.New(),
 	}
 }
 
-func (c *Crawler) Put(p Page) {
-	w := &Crawl{
-		Page: p,
-		Done: make(chan bool),
-	}
+func (c *Crawler) Put(p *Page) {
+	w := &crawl{p, make(chan bool)}
 
-	go func(w *Crawl, p *pipe.Pipeline) {
-		<-w.Done
+	go func(in <-chan bool, out chan<- *Page, p *Page) {
+		<-in
 
-		if w.Error == nil {
-			p.Emit(w.Page)
-		}
-	}(w, c.Pipe)
+		out <- p
+	}(w.Done, c.result, w.Page)
 
-	c.Worker.Add(w)
+	c.worker.Add(w)
 }
 
-type Crawl struct {
-	Page  Page
-	Done  chan bool
-	Error error
+func (c *Crawler) Get() *Page {
+	return <-c.result
 }
 
-func (c *Crawl) Do() {
-	req, err := http.NewRequest("GET", c.Page.Origin(), nil)
-	if err != nil {
-		return
-	}
-	res, err := http.DefaultClient.Do(req)
+type crawl struct {
+	Page *Page
+	Done chan bool
+}
+
+func (c *crawl) Do() {
+	res, err := http.Get(c.Page.Origin())
 	if err != nil {
 		return
 	}
@@ -62,16 +54,8 @@ func (c *Crawl) Do() {
 	for s.Scan() {
 		t := s.Text()
 
-		switch {
-		case strings.HasPrefix(t, "/"):
-			req.URL.Path = t
-			t = req.URL.String()
-
-			fallthrough
-		case strings.HasPrefix(t, "http"):
-			if !c.Page.HasRefer(t) {
-				c.Page.AddRefer(t)
-			}
+		if !c.Page.HasRefer(t) {
+			c.Page.AddRefer(t)
 		}
 	}
 

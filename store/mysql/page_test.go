@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/bodokaiser/gerenuk/store"
+	"github.com/bodokaiser/crawler/store"
 )
 
 func TestPage(t *testing.T) {

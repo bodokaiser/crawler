@@ -18,7 +18,7 @@ type WorkerSuite struct {
 }
 
 func (s *WorkerSuite) SetUpTest(c *check.C) {
-	s.worker = NewWorker()
+	s.worker = New()
 
 	s.work1 = &counter{10, make(chan bool)}
 	s.work2 = &counter{100, make(chan bool)}

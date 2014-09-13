@@ -23,7 +23,7 @@ type Worker struct {
 	timeout time.Duration
 }
 
-func NewWorker() *Worker {
+func New() *Worker {
 	w := &Worker{}
 	w.SetTimeout(DefaultTimeout)
 	w.SetMaxQueue(DefaultMaxQueue)

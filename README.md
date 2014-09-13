@@ -1,8 +1,6 @@
-# Gerenuk
+# Crawler
 
-![Gerenuk](http://bit.ly/1r7CKNx)
-
-**Gerenuk** is a concurrent URL web crawler written in **Go**.
+High-Performance Web Crawler written in **Go**.
 
 ## License
 

@@ -3,7 +3,7 @@ package mysql
 import (
 	"database/sql"
 
-	"github.com/bodokaiser/gerenuk/store"
+	"github.com/bodokaiser/crawler/store"
 )
 
 const (
