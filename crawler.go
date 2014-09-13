@@ -9,18 +9,24 @@ import (
 )
 
 type Crawler struct {
+	pages  *Pages
 	result chan *Page
 	worker *work.Worker
 }
 
 func New() *Crawler {
 	return &Crawler{
+		pages:  new(Pages),
 		result: make(chan *Page),
 		worker: work.New(),
 	}
 }
 
 func (c *Crawler) Put(p *Page) {
+	if c.pages.Has(p) {
+		return
+	}
+
 	w := &crawl{p, make(chan bool)}
 
 	go func(in <-chan bool, out chan<- *Page, p *Page) {
@@ -29,6 +35,7 @@ func (c *Crawler) Put(p *Page) {
 		out <- p
 	}(w.Done, c.result, w.Page)
 
+	c.pages.Add(p)
 	c.worker.Add(w)
 }
 
@@ -54,8 +61,8 @@ func (c *crawl) Do() {
 	for s.Scan() {
 		t := s.Text()
 
-		if !c.Page.HasRefer(t) {
-			c.Page.AddRefer(t)
+		if !c.Page.Has(t) {
+			c.Page.Push(t)
 		}
 	}
 

@@ -11,15 +11,13 @@ type Page struct {
 }
 
 func (p *Page) SetOrigin(url string) {
-	url = normalize(url).String()
-
 	if len(url) > 0 {
-		p.Origin = url
+		p.Origin = normalize(url)
 	}
 }
 
-func (p *Page) HasRefer(url string) bool {
-	url = normalize(url).String()
+func (p *Page) Has(url string) bool {
+	url = normalize(url)
 
 	for _, ref := range p.Refers {
 		if ref == url {
@@ -30,28 +28,48 @@ func (p *Page) HasRefer(url string) bool {
 	return false
 }
 
-func (p *Page) AddRefer(url string) {
+func (p *Page) Push(urlStr string) {
 	switch {
-	case strings.HasPrefix(url, "/"):
-		o := normalize(p.Origin)
-		o.Path = url
-		url = o.String()
+	case strings.HasPrefix(urlStr, "/"):
+		ref, err := url.Parse(urlStr)
+		if err != nil {
+			break
+		}
+		org, _ := url.Parse(p.Origin)
+		org.Path = ref.Path
+		urlStr = org.String()
 
 		fallthrough
-	case strings.HasPrefix(url, "http"):
-		p.Refers = append(p.Refers, url)
+	case strings.HasPrefix(urlStr, "http"):
+		p.Refers = append(p.Refers, urlStr)
 	}
 }
 
-func normalize(urlStr string) *url.URL {
+func normalize(urlStr string) string {
 	uri, err := url.Parse(urlStr)
 	if err != nil {
-		return nil
+		return ""
 	}
 
 	uri.Host = strings.ToLower(uri.Host)
 	uri.Scheme = strings.ToLower(uri.Scheme)
 	uri.Fragment = ""
 
-	return uri
+	return uri.String()
+}
+
+type Pages []*Page
+
+func (ps *Pages) Has(p *Page) bool {
+	for _, x := range *ps {
+		if x.Origin == p.Origin {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (ps *Pages) Add(p *Page) {
+	*ps = append(*ps, p)
 }

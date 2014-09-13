@@ -25,14 +25,13 @@ func main() {
 	for {
 		p := c.Get()
 
-		fmt.Printf("Origin: %s\n", p.Origin)
+		fmt.Printf("%s\n", p.Origin)
 
 		for _, r := range p.Refers {
-			fmt.Printf("Refer: %s\n", r)
+			p := &crawler.Page{}
+			p.SetOrigin(r)
 
-			c.Put(&crawler.Page{
-				Origin: conf.Origin,
-			})
+			c.Put(p)
 		}
 	}
 }
