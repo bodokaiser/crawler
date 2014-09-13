@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	. "github.com/bodokaiser/gerenuk"
@@ -62,7 +61,6 @@ func insert(in <-chan pipe.Event) <-chan pipe.Event {
 		for e := range in {
 			p := e.(Page)
 
-			fmt.Printf("pre\n")
 			if err := pages.Insert(&p); err != nil {
 				log.Fatalf("Error inserting page: %s.\n", err)
 
@@ -70,8 +68,8 @@ func insert(in <-chan pipe.Event) <-chan pipe.Event {
 			} else {
 				out <- p
 			}
-			fmt.Printf("post\n")
 		}
+
 		close(out)
 	}(in, out)
 

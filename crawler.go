@@ -5,51 +5,54 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bodokaiser/gerenuk/html"
 	"github.com/bodokaiser/gerenuk/pipe"
-	"github.com/bodokaiser/gerenuk/worker"
+	"github.com/bodokaiser/gerenuk/scan/html"
+	"github.com/bodokaiser/gerenuk/work"
 )
 
 type Crawler struct {
-	Pool *worker.Pool
-	Pipe *pipe.Pipeline
+	Worker *work.Worker
+	Pipe   *pipe.Pipeline
 }
 
 func NewCrawler() *Crawler {
 	return &Crawler{
-		Pool: worker.NewPool(),
-		Pipe: pipe.NewPipeline(),
+		Worker: work.NewWorker(),
+		Pipe:   pipe.NewPipeline(),
 	}
 }
 
 func (c *Crawler) Put(p Page) {
-	w := &worker.Work{
-		Func:   DefaultWork,
-		Done:   make(chan bool),
-		Params: []interface{}{p},
+	w := &Crawl{
+		Page: p,
+		Done: make(chan bool),
 	}
 
-	go func(w *worker.Work, p *pipe.Pipeline) {
+	go func(w *Crawl, p *pipe.Pipeline) {
 		<-w.Done
 
 		if w.Error == nil {
-			p.Emit(w.Result.(Page))
+			p.Emit(w.Page)
 		}
 	}(w, c.Pipe)
 
-	c.Pool.Put(w)
+	c.Worker.Add(w)
 }
 
-func DefaultWork(params ...interface{}) (interface{}, error) {
-	p := params[0].(Page)
+type Crawl struct {
+	Page  Page
+	Done  chan bool
+	Error error
+}
 
-	req, err := http.NewRequest("GET", p.Origin(), nil)
+func (c *Crawl) Do() {
+	req, err := http.NewRequest("GET", c.Page.Origin(), nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer res.Body.Close()
 
@@ -66,11 +69,11 @@ func DefaultWork(params ...interface{}) (interface{}, error) {
 
 			fallthrough
 		case strings.HasPrefix(t, "http"):
-			if !p.HasRefer(t) {
-				p.AddRefer(t)
+			if !c.Page.HasRefer(t) {
+				c.Page.AddRefer(t)
 			}
 		}
 	}
 
-	return p, nil
+	close(c.Done)
 }
