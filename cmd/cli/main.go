@@ -3,12 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"sync"
+	"log"
 
 	"github.com/bodokaiser/crawler"
 )
-
-var wg = new(sync.WaitGroup)
 
 func main() {
 	var entry string
@@ -16,33 +14,25 @@ func main() {
 	flag.StringVar(&entry, "entry", "", "")
 	flag.Parse()
 
-	c := crawler.New()
-	c.Put(&crawler.Page{
-		Origin: entry,
-	})
+	r, err := crawler.NewRequest(entry)
+	if err != nil {
+		log.Fatalf("Error on initial request: %s.\n", err)
 
-	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-
-		go crawl(c)
+		return
 	}
 
-	wg.Wait()
-}
+	c := crawler.New()
+	c.Add(r)
 
-func crawl(c *crawler.Crawler) {
 	for {
-		p := c.Get()
+		for _, r := range c.Get() {
+			fmt.Printf("%s\n", r.Origin)
 
-		fmt.Printf("%s\n", p.Origin)
+			for _, u := range r.Refers {
+				r, _ := crawler.NewRequest(u.String())
 
-		for _, r := range p.Refers {
-			p := &crawler.Page{}
-			p.SetOrigin(r)
-
-			c.Put(p)
+				c.Add(r)
+			}
 		}
 	}
-
-	wg.Done()
 }
