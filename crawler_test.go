@@ -15,13 +15,14 @@ func TestCrawler(t *testing.T) {
 }
 
 type CrawlerSuite struct {
+	counter int
 	request *Request
 	crawler *Crawler
 	server  *httptest.Server
 }
 
 func (s *CrawlerSuite) SetUpSuite(c *check.C) {
-	s.server = httptest.NewServer(http.HandlerFunc(handler))
+	s.server = httptest.NewServer(http.HandlerFunc(s.handler))
 }
 
 func (s *CrawlerSuite) SetUpTest(c *check.C) {
@@ -30,13 +31,18 @@ func (s *CrawlerSuite) SetUpTest(c *check.C) {
 
 	s.crawler = New()
 	s.request = r
+	s.counter = 0
 }
 
 func (s *CrawlerSuite) TestAdd(c *check.C) {
 	s.crawler.Add(s.request)
+	s.crawler.Add(s.request)
+	s.crawler.Add(s.request)
 
 	_, ok := <-s.request.Done
 	c.Assert(ok, check.Equals, false)
+
+	c.Check(s.counter, check.Equals, 1)
 }
 
 func (s *CrawlerSuite) TestGet(c *check.C) {
@@ -47,19 +53,17 @@ func (s *CrawlerSuite) TestGet(c *check.C) {
 	c.Check(r[0], check.DeepEquals, s.request)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func (s *CrawlerSuite) handler(w http.ResponseWriter, r *http.Request) {
+	s.counter++
+
 	io.WriteString(w, `
 		<!DOCTYPE html>
 		<html>
 			<head></head>
 			<body>
 				<h1>Example</h1>
-				<a href="foo.html"></a>
-				<a href="/foo.html"></a>
-				<a href="/bar.html"></a>
-				<a href="//example.org"></a>
 				<a href="http://example.org"></a>
-				<a href="https://example.org"></a>
+				<a href="https://example.com"></a>
 			</body>
 		</html>
 	`)
