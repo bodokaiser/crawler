@@ -1,4 +1,4 @@
-package httpd
+package event
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ func TestEvent(t *testing.T) {
 }
 
 type EventSuite struct {
-	events   *EventStream
+	events   *Stream
 	response *httptest.ResponseRecorder
 }
 
@@ -22,7 +22,7 @@ func (s *EventSuite) SetUpTest(c *check.C) {
 	req, _ := http.NewRequest("GET", "/", nil)
 	res := httptest.NewRecorder()
 
-	evt, err := NewEventStream(req, res)
+	evt, err := NewStream(req, res)
 	c.Check(err, check.IsNil)
 
 	s.events = evt
