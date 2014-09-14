@@ -1,35 +1,38 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 
 	"github.com/bodokaiser/crawler"
-	_ "github.com/bodokaiser/crawler/store/mysql"
 )
 
 func main() {
-	conf := &crawler.Config{}
-	conf.Parse()
+	var entry string
 
-	if err := conf.Check(); err != nil {
-		log.Fatalf("Error parsing parameters: %s.\n", err)
+	flag.StringVar(&entry, "entry", "", "")
+	flag.Parse()
+
+	r, err := crawler.NewRequest(entry)
+	if err != nil {
+		log.Fatalf("Error on initial request: %s.\n", err)
 
 		return
 	}
 
 	c := crawler.New()
-	c.Put(crawler.NewPage(conf.Origin))
+	c.Add(r)
 
 	for {
-		p := c.Get()
+		for _, r := range c.Get() {
+			fmt.Printf("%s\n", r.Origin)
 
-		fmt.Printf("Origin: %s\n", p.Origin())
+			for _, u := range r.Refers {
+				r, _ := crawler.NewRequest(u.String())
 
-		for _, r := range p.Refers() {
-			fmt.Printf("Refer: %s\n", r)
-
-			c.Put(crawler.NewPage(r))
+				c.Add(r)
+			}
 		}
 	}
 }

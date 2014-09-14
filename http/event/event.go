@@ -1,4 +1,4 @@
-package httpd
+package event
 
 import (
 	"errors"
@@ -10,9 +10,9 @@ import (
 // Error used when response writer does not support Flusher.
 var ErrBadStream = errors.New("bad event stream")
 
-// Type EventStream provdes an abstraction for http responses of content type
+// Type Stream provdes an abstraction for http responses of content type
 // event stream.
-type EventStream struct {
+type Stream struct {
 	writer  io.Writer
 	flusher http.Flusher
 	request *http.Request
@@ -20,7 +20,7 @@ type EventStream struct {
 
 // Returns initialized EventStream and error depending if response supports cast
 // to Flusher.
-func NewEventStream(r *http.Request, w http.ResponseWriter) (*EventStream, error) {
+func NewStream(r *http.Request, w http.ResponseWriter) (*Stream, error) {
 	f, ok := w.(http.Flusher)
 
 	if ok {
@@ -31,7 +31,7 @@ func NewEventStream(r *http.Request, w http.ResponseWriter) (*EventStream, error
 		return nil, ErrBadStream
 	}
 
-	return &EventStream{
+	return &Stream{
 		writer:  w,
 		flusher: f,
 		request: r,
@@ -40,7 +40,7 @@ func NewEventStream(r *http.Request, w http.ResponseWriter) (*EventStream, error
 
 // Emits a new event to the event stream.
 // Returns error if write fails.
-func (e *EventStream) Emit(data string) error {
+func (e *Stream) Emit(data string) error {
 	_, err := fmt.Fprintf(e.writer, "data: %s\n\n", data)
 
 	if err != nil {

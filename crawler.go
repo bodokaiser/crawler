@@ -1,63 +1,81 @@
 package crawler
 
 import (
-	"bufio"
-	"net/http"
+	"time"
 
-	"github.com/bodokaiser/crawler/scan/html"
 	"github.com/bodokaiser/crawler/work"
 )
 
 type Crawler struct {
-	result chan *Page
-	worker *work.Worker
+	worker   *work.Worker
+	visited  []*Request
+	results  chan *Request
+	results2 chan []*Request
 }
 
 func New() *Crawler {
-	return &Crawler{
-		result: make(chan *Page),
-		worker: work.New(),
+	c := &Crawler{
+		worker:   work.New(),
+		visited:  make([]*Request, 0),
+		results:  make(chan *Request),
+		results2: make(chan []*Request),
+	}
+
+	go func(in <-chan *Request, out chan<- []*Request) {
+		rs, timer := make([]*Request, 0), time.NewTimer(0)
+
+		var t <-chan time.Time
+		var o chan<- []*Request
+
+		for {
+			select {
+			case r := <-in:
+				rs = append(rs, r)
+
+				if t == nil {
+					timer.Reset(100 * time.Millisecond)
+					t = timer.C
+				}
+			case <-t:
+				o = out
+				t = nil
+			case o <- rs:
+				rs = make([]*Request, 0)
+				o = nil
+			}
+		}
+	}(c.results, c.results2)
+
+	return c
+}
+
+func (c *Crawler) Get() []*Request {
+	return <-c.results2
+}
+
+func (c *Crawler) Add(r *Request) {
+	if !c.has(r) {
+		go func(r *Request, out chan *Request) {
+			<-r.Done
+
+			out <- r
+		}(r, c.results)
+
+		c.push(r)
+		c.worker.Add(r)
 	}
 }
 
-func (c *Crawler) Put(p *Page) {
-	w := &crawl{p, make(chan bool)}
-
-	go func(in <-chan bool, out chan<- *Page, p *Page) {
-		<-in
-
-		out <- p
-	}(w.Done, c.result, w.Page)
-
-	c.worker.Add(w)
-}
-
-func (c *Crawler) Get() *Page {
-	return <-c.result
-}
-
-type crawl struct {
-	Page *Page
-	Done chan bool
-}
-
-func (c *crawl) Do() {
-	res, err := http.Get(c.Page.Origin())
-	if err != nil {
-		return
-	}
-	defer res.Body.Close()
-
-	s := bufio.NewScanner(res.Body)
-	s.Split(html.ScanHref)
-
-	for s.Scan() {
-		t := s.Text()
-
-		if !c.Page.HasRefer(t) {
-			c.Page.AddRefer(t)
+func (c *Crawler) has(r *Request) bool {
+	for _, v := range c.visited {
+		if v.Origin.String() == r.Origin.String() {
+			return true
 		}
 	}
 
-	close(c.Done)
+	return false
+}
+
+func (c *Crawler) push(r *Request) {
+	c.visited = append(c.visited, r)
 }
