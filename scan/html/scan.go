@@ -2,11 +2,13 @@ package html
 
 import "bytes"
 
+// Default delimiters for href attribute.
 var (
 	HrefPrefix = []byte(`href="`)
 	HrefSuffix = []byte(`"`)
 )
 
+// Implementation of bufio.SplitFunc to extract html href attributes.
 func ScanHref(b []byte, eof bool) (int, []byte, error) {
 	i := bytes.Index(b, HrefPrefix)
 
