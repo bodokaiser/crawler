@@ -3,6 +3,7 @@
 
 # builds
 *-bin
+build*
 
 # temporary
 *.swp

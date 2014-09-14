@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"bufio"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,9 +15,9 @@ import (
 // interface where it will do a HTTP request and push extracted hrefs from the
 // HTML code into the Refers slice.
 type Request struct {
-	Done   chan bool
-	Origin *url.URL
-	Refers []*url.URL
+	Done   chan bool  `json:"-"`
+	Origin *url.URL   `json:"origin"`
+	Refers []*url.URL `json:"refers"`
 }
 
 // Returns a new request which will be done against the provided url string.
@@ -76,6 +77,21 @@ func (r *Request) Push(u *url.URL) {
 	normalize(u)
 
 	r.Refers = append(r.Refers, u)
+}
+
+// Implements the json.Unmarshaler interface to return urls as string.
+func (r *Request) MarshalJSON() ([]byte, error) {
+	s := make([]string, len(r.Refers))
+	for i, r := range r.Refers {
+		s[i] = r.String()
+	}
+
+	m := map[string]interface{}{
+		"origin": r.Origin.String(),
+		"refers": s,
+	}
+
+	return json.Marshal(m)
 }
 
 func normalize(u *url.URL) {

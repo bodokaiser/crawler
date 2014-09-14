@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+	<head>
+    <title>Crawler</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <style>
+      .node circle {
+        fill: #34495e;
+      }
+      .node text {
+        font: 8px Helvetica;
+        font-weight: 200;
+        fill: #34495e;
+      }
+
+      .link {
+        fill: none;
+        stroke: #c3c3c3;
+        stroke-width: 1px;
+      }
+    </style>
+	</head>
+  <body>
+   <div class="jumbotron">
+      <div class="container">
+        <div class="row">
+          <div class="col-xs-8 col-xs-offset-2">
+            <h1 class="text-center">Welcome to Generuk!</h1>
+            <p class="text-center">
+              <strong>Generuk</strong> is a high performance web crawler written
+              in <a href="http://golang.org">Go</a>.
+            </p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xs-6 col-xs-offset-3">
+            <form class="form" style="margin-top: 60px">
+              <div class="input-group input-group-lg">
+                <input class="form-control" name="url" type="url" placeholder="http://www.google.com" required />
+                <span class="input-group-btn">
+                  <button class="btn btn-lg btn-default" type="submit">Crawl</button>
+                </span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <svg viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid"></svg>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+      var root = {};
+
+      var diameter = 600;
+
+      var svg = d3.select('svg')
+        .append('g')
+          .attr('transform', 'translate(500, 300)');
+
+      var tree = d3.layout.tree()
+        .size([360, 240])
+        .separation(function(a, b) {
+          return (a.parent == b.parent ? 1 : 2) / a.depth;
+        });
+
+      var diagonal = d3.svg.diagonal.radial()
+        .projection(function(item) {
+          return [item.y, item.x / 180 * Math.PI];
+        });
+
+      document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.target.remove();
+
+        root.name = e.target.elements.namedItem('url').value;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('PUT', '/crawl');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({ origin: root.name }))
+      });
+
+      new EventSource('/events').addEventListener('message', function(e) {
+        var page = JSON.parse(e.data);
+
+        console.info(page);
+
+        if (!root.children) {
+          root.children = [];
+
+          page.refers.forEach(function(refer) {
+            root.children.push({ name: refer });
+
+            if (root.children.length > 2) render(root);
+          });
+        } else {
+          append(root, page);
+        }
+
+        function append(src, page) {
+          (src.children || []).forEach(function(child) {
+            if (child.name === page.origin) {
+              child.children = child.children || [];
+
+              page.refers.forEach(function(refer) {
+                child.children.push({ name: refer });
+
+                render(root);
+              });
+            } else {
+              append(child, page);
+            }
+          });
+        }
+      });
+
+      function render(root) {
+        var nodes = tree.nodes(root);
+        var links = tree.links(nodes);
+
+        var link = svg.selectAll('.link')
+          .data(links);
+
+        link.enter()
+          .append('path')
+            .attr('class', 'link')
+            .attr('d', diagonal);
+
+        link.transition()
+          .delay(200)
+          .duration(800)
+          .attr('d', diagonal);
+
+        var node = svg.selectAll('.node')
+          .data(nodes);
+
+        node.transition()
+          .delay(200)
+          .duration(800)
+          .attr('transform', function(item) {
+            return 'rotate(' + (item.x - 90) + ') translate(' + item.y + ')';
+          });
+
+        var g = node.enter()
+          .append('g')
+            .attr('class', 'node')
+            .attr('transform', function(item) {
+              return 'rotate(' + (item.x-90) + ')translate(' + item.y + ')';
+            });
+
+        g.append('circle')
+          .attr('r', 4)
+          .transition()
+            .duration(300)
+            .delay(function(item, index) {
+              return 24 * index;
+            })
+
+        g.append('text')
+          .attr('dy', '.40em')
+          .attr("transform", function(item) {
+            return item.x < 180 ? "translate(8)" : "rotate(180)translate(-8)";
+          })
+          .attr('text-anchor', function(item) {
+            return item.x < 180 ? 'start' : 'end';
+          })
+          .text(function(item) {
+            return item.name;
+          })
+          .transition()
+            .duration(300)
+            .delay(function(item, index) {
+              return 24 * index;
+            });
+      }
+    </script>
+	</body>
+</html>
