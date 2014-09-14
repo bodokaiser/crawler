@@ -1,8 +1,8 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/bodokaiser/crawler"
@@ -11,16 +11,14 @@ import (
 var wg = new(sync.WaitGroup)
 
 func main() {
-	conf := &crawler.Config{}
-	if err := conf.Parse(); err != nil {
-		log.Fatalf("Error parsing parameters: %s.\n", err)
+	var entry string
 
-		return
-	}
+	flag.StringVar(&entry, "entry", "", "")
+	flag.Parse()
 
 	c := crawler.New()
 	c.Put(&crawler.Page{
-		Origin: conf.Entry,
+		Origin: entry,
 	})
 
 	for i := 0; i < 1000; i++ {
