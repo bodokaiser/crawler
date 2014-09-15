@@ -34,23 +34,15 @@ func (s *CrawlerSuite) SetUpTest(c *check.C) {
 	s.counter = 0
 }
 
-func (s *CrawlerSuite) TestAdd(c *check.C) {
-	s.crawler.Add(s.request)
-	s.crawler.Add(s.request)
-	s.crawler.Add(s.request)
+func (s *CrawlerSuite) TestSingle(c *check.C) {
+	s.crawler.Do(s.request)
+	s.crawler.Do(s.request)
+	s.crawler.Run(1)
 
 	_, ok := <-s.request.Done
 	c.Assert(ok, check.Equals, false)
 
 	c.Check(s.counter, check.Equals, 1)
-}
-
-func (s *CrawlerSuite) TestGet(c *check.C) {
-	s.crawler.Add(s.request)
-
-	r := s.crawler.Get()
-	c.Check(r, check.HasLen, 1)
-	c.Check(r[0], check.DeepEquals, s.request)
 }
 
 func (s *CrawlerSuite) handler(w http.ResponseWriter, r *http.Request) {

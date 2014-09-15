@@ -10,13 +10,14 @@ import (
 	"github.com/bodokaiser/crawler/http/event"
 )
 
-var rate int
+var rate, worker int
 var path, addr string
 
 func main() {
 	flag.IntVar(&rate, "rate", 0, "")
+	flag.IntVar(&worker, "worker", 100, "")
 	flag.StringVar(&path, "path", "", "")
-	flag.StringVar(&addr, "addr", "", "")
+	flag.StringVar(&addr, "addr", ":3000", "")
 	flag.Parse()
 
 	http.Handle("/", Handler())
@@ -24,9 +25,10 @@ func main() {
 }
 
 func Handler() http.Handler {
-	c := crawler.New()
+	ch := make(chan *crawler.Request)
 
-	fs := http.FileServer(http.Dir(path))
+	c := crawler.New()
+	c.Run(worker)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -42,7 +44,9 @@ func Handler() http.Handler {
 				panic(err)
 			}
 
-			c.Add(r)
+			c.Do(r)
+
+			go wait(r, ch)
 		case "/events":
 			e, err := event.NewStream(r, w)
 			if err != nil {
@@ -50,7 +54,7 @@ func Handler() http.Handler {
 				return
 			}
 
-			for _, r := range c.Get() {
+			for r := range ch {
 				b, err := json.Marshal(r)
 				if err != nil {
 					panic(err)
@@ -62,15 +66,23 @@ func Handler() http.Handler {
 				for _, u := range r.Refers {
 					r, _ := crawler.NewRequest(u.String())
 
-					c.Add(r)
+					c.Do(r)
+
+					go wait(r, ch)
 				}
 
 				if rate > 0 {
-					time.Sleep(time.Duration(rate) * time.Millisecond)
+					time.Sleep(time.Duration(rate) * time.Second)
 				}
 			}
 		default:
-			fs.ServeHTTP(w, r)
+			http.ServeFile(w, r, path+"/index.html")
 		}
 	})
+}
+
+func wait(r *crawler.Request, out chan<- *crawler.Request) {
+	<-r.Done
+
+	out <- r
 }

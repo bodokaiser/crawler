@@ -24,9 +24,11 @@ func (s *WorkerSuite) SetUpTest(c *check.C) {
 	s.work2 = &counter{100, make(chan bool)}
 }
 
-func (s *WorkerSuite) TestAdd(c *check.C) {
-	s.worker.Add(s.work1)
-	s.worker.Add(s.work2)
+func (s *WorkerSuite) Test(c *check.C) {
+	s.worker.Do(s.work1)
+	s.worker.Do(s.work2)
+	s.worker.Run(1)
+	s.worker.Kill()
 
 	<-s.work1.Done
 	<-s.work2.Done
