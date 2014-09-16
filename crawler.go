@@ -25,6 +25,10 @@ func (c *Crawler) Do(r *Request) {
 	if v, ok := c.visits[u]; ok {
 		r.Refers = v.Refers
 
+		if r != v {
+			close(r.Done)
+		}
+
 		return
 	}
 
